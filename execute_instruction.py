@@ -336,10 +336,70 @@ def execute_one_instruction(stack, instruction, locals_value, globals_value):
         stack[top-1] = -stack[top-1]
 
     elif op in ['f32.ceil', 'f64.ceil']:
-        stack[top-1] = ceil(stack[top-1])
+        stack[top-1] = float(ceil(stack[top-1]))
 
     elif op in ['f32.floor', 'f64.floor']:
-        stack[top-1] = floor(stack[top-1])
+        stack[top-1] = float(floor(stack[top-1]))
 
     elif op in ['f32.trunc', 'f64.trunc']:
-        
+        stack[top-1] = float(trunc(stack[top-1]))
+
+    elif op in ['f32.nearest', 'f64.nearest']:
+        stack[top-1] = float(round(stack[top-1]))
+
+    elif op in ['f32.sqrt', 'f64.sqrt']:
+        stack[top-1] = sqrt(stack[top-1])
+
+    elif op in ['f32.add', 'f64.add']:
+        stack[top-2] = stack[top-2] + stack[top-1]
+
+    elif op in ['f32.sub', 'f64.sub']:
+        stack[top-2] = stack[top-2] - stack[top-1]
+        top -= 1
+
+    elif op in ['f32.mul', 'f64.mul']:
+        stack[top-2] = stack[top-2] * stack[top-1]
+        top -= 1
+
+    elif op in ['f32.div', 'f64.div']:
+        stack[top-2] = stack[top-2] / stack[top-1]
+        top -= 1
+
+    elif op in ['f32.min', 'f64.min']:
+        stack[top-2] = min(stack[top-2], stack[top-1])
+        top -= 1
+    
+    elif op in ['f32.max', 'f64.max']:
+        stack[top-2] = max(stack[top-2], stack[top-1])
+        top -= 1
+
+    elif op in ['f32.copysign', 'f64.copysign']:
+        stack[top-2] = copysign(stack[top-2], stack[top-1])
+        top -= 1
+
+    elif op in ['i32.wrap/i64']:
+        stack[top-1] %= 2**32
+
+    elif op in ['i32.trunc_s/f32', 'i32.trunc_u/f32', 'i32.trunc_s/f64', 'i32.trunc_u/f64']:
+        stack[top-1] = int(stack[top-1])
+
+    elif op in ['i64.extend_s/i32', 'i64.extend_u/i32']:
+        pass
+
+    elif op in ['i64.trunc_s/f32', 'i64.trunc_u/f32', 'i64.trunc_s/f64', 'i64.trunc_u/f64']:  # TODO : Implement the function
+        stack[top-1] = int(stack[top-1])
+    
+    elif op in ['f32.convert_s/i32', 'f32.convert_u/i32', 'f32.convert_s/i64', 'f32.convert_u/i64']:
+        stack[top-1] = float(stack[top-1])
+
+    elif op in ['f32.demote/f64']:
+        pass
+
+    elif op in ['f64.convert_s/i32', 'f64.convert_u/i32', 'f64.convert_s/i64', 'f64.convert_u/i64']:
+        stack[top-1] = float(stack[top-1])
+
+    elif op in ['f64.promote/f32']:
+        pass
+
+    elif op in ['i32.reinterpret/f32']:
+        pass
