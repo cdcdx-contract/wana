@@ -1,5 +1,6 @@
 from instructions import *
 from utils import *
+from math import *
 
 # Executing the singal instruction
 def execute_one_instruction(stack, instruction, locals_value, globals_value):
@@ -268,6 +269,25 @@ def execute_one_instruction(stack, instruction, locals_value, globals_value):
     elif op in ['i32.div_s', 'i32.div_u', 'i64.div_s', 'i64.div_u']:
         stack[top-2] = int(stack[top-2] / stack[top-1])
         top -= 1
+    
+    elif op in ['i32.rem_s', 'i64.rem_s']:
+        pass
+
+    elif op in ['i32.rem_u', 'i64.rem_u']:
+        stack[top-2] -= stack[top-1] * int(stack[top-2] / stack[top-1])
+        top -= 1
+
+    elif op in ['i32.and', 'i64.and']:
+        stack[top-2] &= stack[top-1]
+        top -= 1
+
+    elif op in ['i32.or', 'i64.or']:
+        stack[top-2] |= stack[top-1]
+        top-= 1
+
+    elif op in ['i32.xor', 'i64.xor']:
+        stack[top-2] ^= stack[top-1]
+        top -= 1
 
     elif op in ['i32.shl', 'i64.shl']:
         modulo = 2**int(op[1:3])
@@ -289,4 +309,37 @@ def execute_one_instruction(stack, instruction, locals_value, globals_value):
         stack[top-2] = int(binary_num, base=2)
         top -= 1
 
-    elif op in []
+    elif op in ['i32.rotl', 'i64.rotl']:
+        int_bits = int(op[1:3])
+        shift_len = stack[top-1] % (2**int_bits)
+        stack[top-2] = (stack[top-2] << shift_len) | (stack[top-2] >> (int_bits-shift_len))
+        if int_bits == 32:  # Python has not bits limit
+            stack[top-2] &= 0xFFFFFFFF
+        else:
+            stack[top-2] &= 0xFFFFFFFFFFFFFFFF
+        top -= 1
+
+    elif op in ['i32.rotr', 'i64.rotr']:
+        int_bits = int(op[1:3])
+        shift_len = stack[top-1] % (2**int_bits)
+        stack[top-2] = (stack[top-2] >> shift_len) | (stack[top-2] << (int_bits-shift_len))
+        if int_bits == 32:
+            stack[top-2] &= 0xFFFFFFFF
+        else:
+            stack[top-2] &= 0xFFFFFFFFFFFFFFFF
+        top -= 1
+
+    elif op in ['f32.abs', 'f64.abs']:
+        stack[top-1] = abs(stack[top-1])
+
+    elif op in ['f32.neg', 'f64.neg']:
+        stack[top-1] = -stack[top-1]
+
+    elif op in ['f32.ceil', 'f64.ceil']:
+        stack[top-1] = ceil(stack[top-1])
+
+    elif op in ['f32.floor', 'f64.floor']:
+        stack[top-1] = floor(stack[top-1])
+
+    elif op in ['f32.trunc', 'f64.trunc']:
+        
