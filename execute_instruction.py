@@ -1,6 +1,7 @@
 from instructions import *
 from utils import *
 from math import *
+import struct  # The struct package could interpret binary format
 
 # Executing the singal instruction
 def execute_one_instruction(stack, instruction, locals_value, globals_value):
@@ -402,4 +403,17 @@ def execute_one_instruction(stack, instruction, locals_value, globals_value):
         pass
 
     elif op in ['i32.reinterpret/f32']:
-        pass
+        stack[top-1] = struct.unpack('l', struct.pack('f', stack[top-1]))[0]
+
+    elif op in ['i64.reinterpret/f64']:
+        stack[top-1] = struct.unpack('L', stack.pack('d', stack[top-1]))[0]
+
+    elif op in ['f32.reinterpret/i32']:
+        stack[top-1] = struct.unpack('f', struct.pack('l', stack[top-1]))[0]
+
+    elif op in ['f64.reinterpret/i64']:
+        stack[top-1] = struct.unpack('d', struct.pack('L', stack[top-1]))
+
+    
+    # Correct the size of stack
+    stack = stack[:top]
