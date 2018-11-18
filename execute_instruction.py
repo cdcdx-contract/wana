@@ -1,10 +1,10 @@
 from instructions import *
 from utils import *
 from math import *
-import struct  # The struct package could interpret binary format
+import struct  # The "struct" package could interpret binary format.
 
 # Executing the singal instruction
-def execute_one_instruction(stack, instruction, locals_value, globals_value):
+def execute_one_instruction(instruction, stack, locals_value, globals_value, memory, elements=None):
     op = opcode[instruction[0]]
     top = len(stack)
 
@@ -12,7 +12,7 @@ def execute_one_instruction(stack, instruction, locals_value, globals_value):
         pass
 
     elif op == 'nop':
-        pass
+        pass  # The 'nop' opcode means 'Do nothing'.
 
     elif op == 'loop':
         pass
@@ -45,19 +45,13 @@ def execute_one_instruction(stack, instruction, locals_value, globals_value):
         pass
 
     elif op == 'drop':
-        stack.pop()
         top -= 1
 
     elif op == 'select':
         # TODO
         # How to fork two different paths
-        flag = stack.pop()
-        val_2 = stack.pop()
-        val_1 = stack.pop()
-        if flag:
-            stack.append(val_1)
-        else:
-            stack.append(val_2)
+        if not stack[top-1]:
+            stack[top-3] = stack[top-2]
         top -= 2
 
 
@@ -68,23 +62,12 @@ def execute_one_instruction(stack, instruction, locals_value, globals_value):
 
     elif op == 'set_local':
         locals_pos = instruction[1]
-        if locals_value[local_pos] == stack[top]:
-            stack.pop()
-            top -= 1
-        else:
-            pass
+        locals_value[local_pos] = stack[top-1]
+        top -= 1
 
     elif op == 'tee_local':
         locals_pos = instruction[1]
-        value = stack.pop()
-        stack.append(value)
-        stack.append(value)
-        top += 1
-        if locals_value[local_pos] == stack[top]:
-            stack.pop()
-            top -= 1
-        else:
-            pass
+        locals_value[local_pos] = stack[top-1]
 
     elif op == 'get_global':
         globals_pos = instruction[1]
@@ -93,11 +76,8 @@ def execute_one_instruction(stack, instruction, locals_value, globals_value):
 
     elif op == 'set_global':
         globals_pos = instruction[1]
-        if globals_value[globals_pos] = stack.pop():
-            stack.pop()
-            top -= 1
-        else:
-            pass
+        global_value[globals_pos] = stack[top-1]
+        top -= 1
 
     elif op == 'i32.load':
         align = instruction[1]
@@ -417,3 +397,4 @@ def execute_one_instruction(stack, instruction, locals_value, globals_value):
     
     # Correct the size of stack
     stack = stack[:top]
+
