@@ -18,7 +18,7 @@ def read_u32(bytecode, pos):
     if (first & 0x80) == 0:
         size = first & 0x7f
         byte_move = 1
-    elif (second & 0x80) == 0:
+    elif (second & 0x80) == 0: 
         size = ((first & 0x7f) << 7) | (first & 0x7f)
         byte_move = 2
     elif (third & 0x80) == 0:
@@ -30,7 +30,7 @@ def read_u32(bytecode, pos):
     elif (bytecode[pos+4] & 0x80) == 0:
         if bytecode[pos+4] & 0xf0:
             return (-1, -1)  # The size of bits > 32bits
-        size = ((bytecode[pos+4] & 0x7f) << 28) | ((fourth & 0x7f) << 21) | ((third & 0x7f) << 14) | ((second & 0x7f) << 7) | (first & 0x7f)
+        size = (bytecode[pos+4] & 0x7f) << 28) | ((fourth & 0x7f) << 21) | ((third & 0x7f) << 14) | ((second & 0x7f) << 7) | (first & 0x7f)
         byte_move = 5
     else:
         size = -1

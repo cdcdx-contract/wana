@@ -17,6 +17,8 @@ class Module(object):
         self.globals = []
         self.exports = []
         self.imports = []
+        self.elems = []
+        self.datas = []
 
         pos = 0
         byte_len = len(bytecode)
@@ -179,20 +181,131 @@ class Module(object):
         section_size, byte_move = read_u32(bytecode, pos)
         pos += byte_move
 
-        num, byte_code = read_u32(bytecode, pos)
+        num, byte_move = read_u32(bytecode, pos)
         pos += byte_move
 
         for i in range(num):
             tableidx, byte_move = read_u32(bytecode, pos)
             pos += byte_move
 
-            op = opcode[struct.unpack('B', bytecode[pos])]
-            pos += 1
-            if op in operand_u32:
-                offset, byte_move = read_u32(bytecode, pos)
-            else:
-                offset, byte_move = read_u64(bytecode, pos)
+            expr = []
+            while True:
+                op = opcode[struct.unpack('B', bytecode[pos])[0]] # TODO: FIXUP
+                if op == 'end': break
+                op_src = struct.unpack('B', bytecode[pos])[0]
+                pos += 1
+                if op in operand_u32:
+                    offset, byte_move = read_u32(bytecode, pos)
+                else:
+                    offset, byte_move = read_u64(bytecode, pos)
+                expr.append([op_src, offset])
+                pos += byte_move
+            
+            func_num, byte_move = read_u32(bytecode, pos)
             pos += byte_move
+            funcidx = []
+            for j in range(func_num):
+                idx, byte_move = read_u32(bytecode, pos)
+                pos += byte_move
+                funcidx.append(idx)
+            self.elems.append(Elem(tableidx, expr, funcidx))
+
+        # Construct section 'Code'
+        section_code = struct.unpack('B', bytecode[pos])[0]
+        pos += 1
+
+        section_size, byte_move = read_u32(bytecode, pos)
+        pos += byte_move
+
+        num, byte_move = read_u32(bytecode, pos)
+        pos += byte_move
+
+        for i in range(num):
+
+            func_size, byte_move = read_u32(bytecode, pos)
+            pos += byte_move
+
+            local_decl_count, byte_move = read_u32(bytecode, pos)
+            pos += byte_move
+
+
+            locals_ = []
+            for j in range(local_decl_count):
+                local_type_count, byte_move = read_u32(bytecode, pos)
+                pos += byte_move
+                local_type = value_type[struct.unpack('B', bytecode[pos])]
+                pos += 1
+                locals_ += [local_type] * local_type_count
+            
+            instructions = []
+            end_count = 1
+            while end_count > 0:
+
+                instruction = [opcode[struct.unpack('B', bytecode[pos])[0]]]
+                pos += 1
+
+                if instruction[0] in operand_u32:
+                    u32, byte_move = read_u32(bytecode, pos)
+                    pos += byte_move
+                    instruction += [u32]
+                elif instruction[0] in operand_u64:
+                    u64, byte_move = read_u64(bytecode, pos)
+                    pos += byte_move
+                    instruaction += [u64]
+                elif instruction[0] == 'end':
+                    end_count -= 1
+                elif instruction[0] == 'block':
+                    end_count += 1
+                
+                instructions += instruaction
+            self.codes.append(Code(locals_, instructions))
+
+        # Construct the section 'Data'
+        section_code = struct.unpack('B', bytecode[pos])[0]
+        pos += 1
+
+        section_size, byte_move = read_u32(bytecode, pos)
+        pos += byte_move
+
+        num, byte_move = read_u32(bytecode, pos)
+        pos += byte_move
+
+        for i in range(num):
+            memidx, byte_move = read_u32(bytecode, pos)
+            pos += byte_move
+
+            end_count = 1
+            while end_count > 0:
+
+                offset = [opcode[struct.unpack('B', bytecode[pos])[0]]]
+                pos += 1
+
+                if offset[0] in operand_u32:
+                    u32, byte_move = read_u32(bytecode, pos)
+                    pos += byte_move
+                    offset += [u32]
+                elif offset[0] in operand_u64:
+                    u64, byte_move = read_u64(bytecode, pos)
+                    pos += byte_move
+                    offset += [u64]
+                elif instruction[0] == 'end':
+                    end_count -= 1
+                elif instruction[0] == 'block':
+                    end_count += 1
+
+        data_size, byte_move = read_u32(bytecode, pos)
+        pos += byte_move
+        init_data = bytecode[pos:pos+data_size].decode('utf8')
+        pos += data_size
+
+        self.datas.append(Data(memidx, expr, init_data))
+
+                
+
+    
+
+
+
 
 
 class Type(object):
@@ -200,8 +313,6 @@ class Type(object):
         self.params_type = params_type
         self.results_type = results_type
         self.func_type = func_type
-
-
 
 class Import(object):
     def __init__(self, kind, sigidx=None, name=None):
@@ -232,4 +343,12 @@ class Elem(object):
         self.funcidx = funcidx
 
 class Code(object):
-    def __init__(self, ):
+    def __init__(self, locals_, instructions):
+        self.locals = locals_
+        self.instructions = instructions
+
+class Data(object):
+    def __init__(self, memidx, expr, init_data):
+        self.memidx = memidx'
+        self.expr = expr
+        self.init_data = init_data

@@ -200,12 +200,39 @@ operand_u32 = (
     'get_global',
     'set_global',
     'i32.const',
-    'f32.const'
+    'f32.const',
+    'call',
+    'call_indirect'
+    'br',
+    'br_if',
 )
 
 operand_u64 = (
     'i64.const',
-    'f64.const'
+    'f64.const',
+    'i32.load',
+    'i64.load',
+    'f32.load',
+    'f64.load',
+    'i32.load8_s',
+    'i32.load8_u',
+    'i32.load16_s',
+    'i32.load16_u',
+    'i64.load8_s',
+    'i64.load8_u',
+    'i64.load16_s',
+    'i64.load16_u',
+    'i64.load32_s',
+    'i64.load32_u',
+    'i32.store',
+    'i64.store',
+    'f32.store',
+    'f64.store',
+    'i32.store8',
+    'i32.store16',
+    'i64.store8',
+    'i64.store16',
+    'i64.store32'
 )
 
 operand_memarg = (
@@ -252,7 +279,7 @@ operand = {
     'select': [0x1B, 0],
     'get_local': [0x20, 1],
     'set_local': [0x21, 1],
-    'tee_local': [0x],
+    'tee_local': [0x22, 1],
     'get_global',
     'set_global',
     '',
