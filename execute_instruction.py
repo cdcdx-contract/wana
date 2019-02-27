@@ -2,6 +2,7 @@ from instructions import *
 from utils import *
 from math import *
 import struct  # The "struct" package could interpret binary format.
+from ctypes import *
 
 # Executing the singal instruction
 def execute_one_instruction(instruction, stack, locals_value, globals_value, memory, elements=None):
@@ -57,17 +58,17 @@ def execute_one_instruction(instruction, stack, locals_value, globals_value, mem
 
     elif op == 'get_local':
         locals_pos = instruction[1]
-        stack.append(locals_value[local_pos])
+        stack.append(locals_value[locals_pos])
         top += 1
 
     elif op == 'set_local':
         locals_pos = instruction[1]
-        locals_value[local_pos] = stack[top-1]
+        locals_value[locals_pos] = stack[top-1]
         top -= 1
 
     elif op == 'tee_local':
         locals_pos = instruction[1]
-        locals_value[local_pos] = stack[top-1]
+        locals_value[locals_pos] = stack[top-1]
 
     elif op == 'get_global':
         globals_pos = instruction[1]
@@ -76,20 +77,20 @@ def execute_one_instruction(instruction, stack, locals_value, globals_value, mem
 
     elif op == 'set_global':
         globals_pos = instruction[1]
-        global_value[globals_pos] = stack[top-1]
+        globals_value[globals_pos] = stack[top-1]
         top -= 1
 
     elif op == 'i32.load':
         align = instruction[1]
         offset = instruction[2]
 
-        if mems[0] and 2**align <= 4:
+        if memory[0] and 2**align <= 4:
             pass
 
     elif op == 'i64.load':
         align = instruction[1]
         offset = instruction[2]
-        if mems[0] and 2**align <= 8:
+        if memory[0] and 2**align <= 8:
             pass
 
     elif op == 'f32.load':
@@ -159,54 +160,198 @@ def execute_one_instruction(instruction, stack, locals_value, globals_value, mem
         pass
 
     elif op == 'i32.const':
-        i32_value = int(instruction[1], base=16)
+        i32_value = instruction[1]
         stack.append(i32_value)
         top += 1
 
     elif op == 'i64.const':
-        i64_value = int(instruction[1], base=16)
+        i64_value = instruction[1]
         stack.append(i64_value)
         top += 1
 
     elif op == 'f32.const':
-        pass
+        f32_value = instruction[1]
+        stack.append(f32_value)
+        top += 1
 
     elif op == 'f64.const':
-        pass
+        f64_value = instruction[1]
+        stack.append(f64_value)
+        top += 1
 
     elif op in ['i32.eqz', 'i64.eqz']:
-        stack[top-1] = 1 if stack[top-1] == 0 else 1
+        first = stack[top-1]
+        if is_real(first):
+            if first == 0:
+                computed = 1
+            else:
+                computed = 0
+        else:
+            computed = If(first == 0, BitVecVal(1, int(op[1:3])), BitVecVal(0, int(op[1:3])))
+        
+        stack[top-1] = simplify(computed) if is_expr(computed) else computed
 
-    elif op in ['i32.eq', 'i64.eq', \
-                'f32.eq', 'f64.eq']:
-        stack[top-2] = 1 if stack[top-2] == stack[top-1] else 0
+    elif op in ['i32.eq', 'i64.eq']:
+        first = stack[top-1]
+        second = stack[top-2]
+        if is_all_real(first, second):
+            if first == second:
+                computed = 1
+            else:
+                computed = 0
+        else:
+            first = to_symbolic(first, int(op[1:3]))
+            second = to_symbolic(second, int(op[1:3]))
+            computed = If( eq(first, second), BitVecVal(1, int(op[1:3])), BitVecVal(0, int(op[1:3])))
+        
+        stack[top-2] = simplify(computed) if is_expr(computed) else computed
         top -= 1
 
-    elif op in ['i32.ne', 'i64.ne', \
-                'f32.ne', 'f64.ne']:
-        stack[top-2] = 1 if stack[top-2] != stack[top-1] else 0
+    elif op in ['f32.eq', 'f64.eq']:
+        pass
+
+    elif op in ['i32.ne', 'i64.ne']:
+        first = stack[top-1]
+        second = stack[top-2]
+        if is_all_real(first, second):
+            if first != second:
+                computed = 1
+            else:
+                computed = 0
+        else:
+            first = to_symbolic(first, int(op[1:3]))
+            second = to_symbolic(second, int(op[1:3]))
+            computed = If( eq(first, second), BitVecVal(0, int(op[1:3])), BitVecVal(1, int(op[1:3])))
+        
+        stack[top-2] = simplify(computed) if is_expr(computed) else computed
+        top -= 1
+    
+    elif op in ['f32.ne', 'f64.ne']:
+        pass
+
+    elif op in ['i32.lt_u', 'i64.lt_u']:
+        first = stack[top-1]
+        second = stack[top-2]
+        if is_all_real(first, second):
+            if first < second:
+                computed = 1
+            else:
+                computed = 0
+        else:
+            computed = If(ULT(first, second), BitVecVal(1, int(op[1:3])), BitVecVal(0, Int(op[1:3])))
+        
+        stack[top-2] = simplify(computed) if is_expr(computed) else computed
         top -= 1
 
-    elif op in ['i32.lt_s', 'i32.lt_u', 'i64.lt_s', 'i64.lt_u', \
-                'f32.lt', 'f64.lt']:
-        stack[top-2
-        ] = 1 if stack[top-2] < stack[top-1] else 0
+    elif op in ['i32.lt_s', 'i64.lt_s']:
+        first = stack[top-1]
+        second = stack[top-2]
+        if is_all_real(first, second):
+            if first < second:
+                computed = 1
+            else:
+                computed = 0
+        else:
+            computed = If(first < second, BitVecVal(1, int(op[1:3])), BitVecVal(0, Int(op[1:3])))
+        
+        stack[top-2] = simplify(computed) if is_expr(computed) else computed
         top -= 1
 
-    elif op in ['i32.gt_s', 'i32.gt_s', 'i64.gt_s', 'i64.gt_u', \
-                'f32.gt', 'f64.gt']:
-        stack[top-2] = 1 if stack[top-2] > stack[top-1] else 0
+    elif op in ['f32.lt', 'f64.lt']:
+        pass
+
+    elif op in ['i32.gt_u', 'i64.gt_u']:
+        first = stack[top-1]
+        second = stack[top-2]
+        if is_all_real(first, second):
+            if first < second:
+                computed = 1
+            else:
+                computed = 0
+        else:
+            computed = If(UGT(first, second), BitVecVal(1, int(op[1:3])), BitVecVal(0, Int(op[1:3])))
+        
+        stack[top-2] = simplify(computed) if is_expr(computed) else computed
         top -= 1
 
-    elif op in ['i32.le_s', 'i32.le_u', 'i64.le_s', 'i64.le_u', \
-                'f32.le', 'f64.le']:
-        stack[top-2] = 1 if stack[top-2] <= stack[top-1] else 0
+    elif op in ['i32.gt_s', 'i64.gt_s']:
+        first = stack[top-1]
+        second = stack[top-2]
+        if is_all_real(first, second):
+            if first < second:
+                computed = 1
+            else:
+                computed = 0
+        else:
+            computed = If(first > second, BitVecVal(1, int(op[1:3])), BitVecVal(0, Int(op[1:3])))
+        
+        stack[top-2] = simplify(computed) if is_expr(computed) else computed
         top -= 1
 
-    elif op in ['i32.ge_s', 'i32.ge_u', 'i64.ge_s', 'i64.ge_u', \
-                'f32.ge', 'f64.ge']:
-        stack[top-2] = 1 if stack[top-2] >= stack[top-1] else 0
+    elif op in ['f32.gt', 'f64.gt']:
+        pass
+
+    elif op in ['i32.le_u', 'i64.le_u']:
+        first = stack[top-1]
+        second = stack[top-2]
+        if is_all_real(first, second):
+            if first < second:
+                computed = 1
+            else:
+                computed = 0
+        else:
+            computed = If(ULE(first, second), BitVecVal(1, int(op[1:3])), BitVecVal(0, Int(op[1:3])))
+        
+        stack[top-2] = simplify(computed) if is_expr(computed) else computed
         top -= 1
+
+    elif op in ['i32.le_s', 'i64.le_s']:
+                first = stack[top-1]
+        second = stack[top-2]
+        if is_all_real(first, second):
+            if first < second:
+                computed = 1
+            else:
+                computed = 0
+        else:
+            computed = If(first <= second, BitVecVal(1, int(op[1:3])), BitVecVal(0, Int(op[1:3])))
+        
+        stack[top-2] = simplify(computed) if is_expr(computed) else computed
+        top -= 1
+
+    elif op in ['f32.le', 'f64.le']:
+        pass
+
+    elif op in ['i32.ge_u', 'i64.ge_u']:
+        first = stack[top-1]
+        second = stack[top-2]
+        if is_all_real(first, second):
+            if first < second:
+                computed = 1
+            else:
+                computed = 0
+        else:
+            computed = If(UGE(first, second), BitVecVal(1, int(op[1:3])), BitVecVal(0, Int(op[1:3])))
+        
+        stack[top-2] = simplify(computed) if is_expr(computed) else computed
+        top -= 1
+
+    elif op in ['i32.ge_s',  'i64.ge_s']:
+        first = stack[top-1]
+        second = stack[top-2]
+        if is_all_real(first, second):
+            if first < second:
+                computed = 1
+            else:
+                computed = 0
+        else:
+            computed = If(first >= second, BitVecVal(1, int(op[1:3])), BitVecVal(0, Int(op[1:3])))
+        
+        stack[top-2] = simplify(computed) if is_expr(computed) else computed
+        top -= 1
+
+    elif op in ['f32.ge', 'f64.ge']:
+        pass
     
     elif op in ['i32.clz', 'i64.clz']:
         if stack[top-1] == 0:
@@ -234,84 +379,316 @@ def execute_one_instruction(instruction, stack, locals_value, globals_value, mem
                 stack[top-1] += 1
     
     elif op in ['i32.add', 'i64.add']:
-        stack[top-2] = stack[top-1] + stack[top-2]
+        first = stack[top-1]
+        second = stack[top-2]
+        if is_real(first) and is_symbolic(second):
+            first = BitVecVal(first, int(op[1:3]))
+            computed = first + second
+        elif is_symbolic(first) and is_real(second):
+            second = BitVecVal(second, int(op[1:3]))
+            computed = first + second
+        else:
+            computed = (first + second) % (2 ** 32)
+
+        stack[top-2] = simplify(computed) if is_expr(computed) else computed
         top -= 1
 
     elif op in ['i32.sub', 'i64.sub']:
-        modulo = 2**int(op[1:3])
-        stack[top-2] = (stack[top-2] - stack[top-1] + modulo) % modulo
+        first = stack[top-1]
+        second = stack[top-2]
+        if is_real(first) and is_symbolic(second):
+            first = BitVecVal(first, int(op[1:3]))
+            computed = first - second
+        elif is_symbolic(first) and is_real(second):
+            second = BitVecVal(second, int(op[1:3]))
+            computed = first - second
+        else:
+            computed = (first - second) % (2 ** int(op[1:3]))
+        
+        stack[top-2] = simplify(computed) if is_expr(computed) else computed
         top -= 1
 
     elif op in ['i32.mul', 'i64.mul']:
-        modulo = 2**int(op[1:3])
-        stack[top-2] = (stack[top-2] * stack[top-1]) % modulo
+        first = stack[top-1]
+        second = stack[top-2]
+        if is_real(first) and is_symbolic(second):
+            first = BitVecVal(first, int(op[1:3]))
+        elif is_symbolic(first) and is_real(second):
+            second = BitVecVal(second, int(op[1:3]))
+        computed = first * second % int(op[1:3])
+
+        stack[top-2] = simplify(computed) if is_expr(computed) else computed
         top -= 1
 
-    elif op in ['i32.div_s', 'i32.div_u', 'i64.div_s', 'i64.div_u']:
-        stack[top-2] = int(stack[top-2] / stack[top-1])
-        top -= 1
+    elif op in ['i32.div_u', 'i64.div_u']:
+        first = stack[top-1]
+        second = stack[top-2]
+        if is_all_real(first, second):
+            if second == 0:
+                computed = 0
+                # TODO: Error Processing!
+            else:
+                computed = first / second
+        else:
+            first = BitVecVal(first, int(op[1:3])) if is_real(first) else first
+            second = BitVecVal(second, int(op[1:3])) if is_real(second) else second
+            solver.push()
+            solver.add(Not(second==0))
+            if check_sat(solver) == unsat:
+                computed = 0
+            else:
+                computed = UDIV(first, second)
+            solver.pop()
+        stack[top-2] = simplify(computed) if is_expr(computed) else computed
     
+    elif op in ['i32.div_s', 'i64.div_s']:
+        first = stack[top-1]
+        second = stack[top-2]
+        if is_all_real(first, second):
+            if second == 0:
+                computed = 0
+            elif first == -2**(int(op[1:3])-1) and second == -1:
+                computed = -2**(int(op[1:3])-1)
+            else:
+                sign = -1 if (fitst / second) < 0 else 1
+                computed = sign * (abs(first) / abs(second))
+        else:
+            first = BitVecVal(first, int(op[1:3])) if is_real(first) else first
+            second = BitVecVal(second, int(op[1:3])) if is_real(second) else second
+            solver.push()
+            solver.add(Not(second==0))
+            if check_sat(solver) == unsat:
+                computed = 0
+            else:
+                solver.push()
+                solver.add(Not(And(first == -2*(int(op[1:3])-1), second == -1)))
+                if check_sat(solver) == unsat:
+                    computed = -2**(int(op[1:3])-1)
+                else:
+                    solver.push()
+                    solver.add(first / second < 0)
+                    sign = -1 if check_sat(solver) == sat else 1
+                    z3_abs = lambda x: If(x >= 0, x, -x)
+                    first = z3_abs(first)
+                    second = z3_abs(second)
+                    computed = sign * (first / second)
+                    solver.pop()
+                solver.pop()
+            solver.pop()
+
+        stack[top-2] = simplify(computed) if is_expr(computed) else computed
+        top -= 1
+
     elif op in ['i32.rem_s', 'i64.rem_s']:
-        pass
+        first = stack[top-1]
+        second = stack[top-2]
+        if is_all_real(first, second):
+            if second == 0:
+                computed = 0
+            else:
+                sign = -1 if first < 0 else 1
+                computed = sign * (abs(first) % abs(second))
+
+        else:
+            first = BitVecVal(first, int(op[1:3])) if is_real(first) else first
+            second = BitVecVal(second, int(op[1:3])) if is_real(second) else second
+            
+            solver.push()
+            solver.add(Not(second == 0))
+            if check_sat == unsat:
+                computed = 0
+            else:
+                first = to_signed(first, int(op[1:3]))
+                second = to_signed(second, int(op[1:3]))
+                solver.push()
+                solver.add(first < 0)
+                sign = BitVecVal(-1, int(op[1:3])) if check_sat(solver) == sat else BitVecVal(1, int(op[1:3]))
+                solver.pop()
+
+                z3_abs = lambda x: If(x >= 0, x, -x)
+                first = z3_abs(first)
+                second = z3_abs(second)
+
+                computed = sign * (first % second)
+            solver.pop()
+
+        stack[top-2] = simplify(computed) if is_expr(computed) else computed
+        top -= 1
 
     elif op in ['i32.rem_u', 'i64.rem_u']:
-        stack[top-2] -= stack[top-1] * int(stack[top-2] / stack[top-1])
+        first = stack[top-1]
+        second = stack[top-2]
+        
+        if is_all_real(first, second):
+            if second == 0:
+                computed = 0
+            else:
+                first = to_unsigned(first, int(op[1:3]))
+                second = to_unsigned(second, int(op[1:3]))
+                computed = first % second
+        else:
+            first = to_symbolic(first)
+            second = to_symbolic(second)
+            
+            solver.push()
+            solver.add(Not(second==0))
+            if check_sat(solver) == unsat:
+                computed = 0
+            else:
+                computed = URem(first, second)
+            solver.pop()
+
+
+        stack[top-2] = simplify(computed) if is_expr(computed) else computed
         top -= 1
 
     elif op in ['i32.and', 'i64.and']:
-        stack[top-2] &= stack[top-1]
+        first = stack[top-1]
+        second = stack[top-2]
+        computed = first & second
+        stack[top-2] = simplify(computed) if is_expr(computed) else computed
         top -= 1
 
     elif op in ['i32.or', 'i64.or']:
-        stack[top-2] |= stack[top-1]
+        first = stack[top-1]
+        second = stack[top-2]
+        computed = first | second
+        stack[top-2] = simplify(computed) if is_expr(computed) else computed
         top-= 1
 
     elif op in ['i32.xor', 'i64.xor']:
-        stack[top-2] ^= stack[top-1]
+        first = stack[top-1]
+        second = stack[top-2]
+        computed = first ^ second
+        stack[top-2] = simplify(computed) if is_expr(computed) else computed
         top -= 1
 
-    elif op in ['i32.shl', 'i64.shl']:
-        modulo = 2**int(op[1:3])
-        shift_len = stack[top-1] % modulo
-        stack[top-2] = (stack[top-2] << shift_len) % modulo
+    elif op in ['i32.shl', 'i64.shl']: # waiting to fix-up
+        first = stack[top-1]
+        second = stack[top-2]
+        modulo = int(op[1:3])
+
+        if is_all_real(first, second):
+            if first >= modulo or first < 0:
+                computed = 0
+            else:
+                computed = second << (first % modulo)
+        else:
+            first = to_symbolic(first, modulo)
+            second = to_symbolic(second, modulo)
+            solver.push()
+            solver.add(Not(Or(first >= modulo, first < 0)))
+            if check_sat(solver) == unsat:
+                computed = 0
+            else:
+                computed = second << (first % modulo)
+            solver.pop()
+        
+        stack[top-2] = simplify(computed) if is_expr(computed) else computed
         top -= 1
 
     elif op in ['i32.shr_s', 'i64.shr_s']:
-        modulo = 2**int(op[1:3])
-        shift_len = stack[top-1] % modulo
-        stack[top-2] = stack[top-2] >> shift_len
-        top -= 1
-
-    elif op in ['i32.shr_u', 'i64.shr_u']:
-        modulo = 2**int(op[1:3])
-        shift_len = stack[top-1] % modulo
-        binary_num = bin(stack[top-2])[2:]
-        binary_num = ('0'*shift_len + binary_num)[:len(binary_num)]
-        stack[top-2] = int(binary_num, base=2)
-        top -= 1
-
-    elif op in ['i32.rotl', 'i64.rotl']:
-        int_bits = int(op[1:3])
-        shift_len = stack[top-1] % (2**int_bits)
-        stack[top-2] = (stack[top-2] << shift_len) | (stack[top-2] >> (int_bits-shift_len))
-        if int_bits == 32:  # Python has not bits limit
-            stack[top-2] &= 0xFFFFFFFF
+        first = stack[top-1]
+        second = stack[top-2]
+        modulo = int(op[1:3])
+        
+        if is_all_real(first, second):
+            if first < 0:
+                computed = 0
+            else:
+                computed = second >> (first % modulo)
         else:
-            stack[top-2] &= 0xFFFFFFFFFFFFFFFF
+            first = to_symbolic(first, modulo)
+            second = to_symbolic(second, modulo)
+            solver.push()
+            solver.add(Not(first < 0))
+            if check_sat(solver) == unsat:
+                computed = 0
+            else:
+                computed = second >> (first % modulo)
+            solver.pop()
+        
+        stack[top-2] = simplify(computed) if is_expr(computed) else computed
         top -= 1
 
-    elif op in ['i32.rotr', 'i64.rotr']:
-        int_bits = int(op[1:3])
-        shift_len = stack[top-1] % (2**int_bits)
-        stack[top-2] = (stack[top-2] >> shift_len) | (stack[top-2] << (int_bits-shift_len))
-        if int_bits == 32:
-            stack[top-2] &= 0xFFFFFFFF
+    elif op in ['i32.shr_u', 'i64.shr_u']: # TODO: fix-up
+        first = stack[top-1]
+        second = stack[top-2]
+        modulo = int(op[1:3])
+        bit_len = int('F' * (modulo // 4), base=16)
+
+        if is_all_real(first, second):
+            if first < 0 or first > modulo:
+                computed = 0
+            elif first == 0:
+                computed = stack[top-2]
+            else:
+                computed = (second & bit_len) >> (first % modulo)
         else:
-            stack[top-2] &= 0xFFFFFFFFFFFFFFFF
+            first = to_symbolic(first, modulo)
+            second = to_symbolic(second, modulo)
+            solver.push()
+            solver.add(Not(first < 0))
+            if check_sat(solver) == unsat:
+                computed = 0
+            else:
+                computed = UShR(second, (first % modulo)) 
+            solver.pop()
+
+        stack[top-2] = simplify(computed) if is_expr(computed) else computed
         top -= 1
 
+    elif op in ['i32.rotl', 'i64.rotl']: # TODO: fix-up
+        first = stack[top-1]
+        second = stack[top-2]
+        modulo = int(op[1:3])
+        bit_len = int('F' * (modulo // 4), base=16)
+
+        if is_all_real(first, second):
+            move_len = first % modulo
+            second &= bit_len
+            computed = (second >> (modulo - move_len)) | (second << move_len)
+        else:
+            first = to_symbolic(first, modulo)
+            second = to_symbolic(second, modulo)
+            move_len = first % modulo
+            second &= bit_len
+            computed = (second >> (modulo - move_len)) | (second << move_len)
+        
+        stack[top-2] = simplify(computed) if is_expr(computed) else computed
+        top -= 1
+
+    elif op in ['i32.rotr', 'i64.rotr']: # TODO: fix-up
+        first = stack[top-1]
+        second = stack[top-2]
+        modulo = int(op[1:3])
+        bit_len = int('F' * (modulo // 4), base=16)
+
+        if is_all_real(first, second):
+            move_len = first % modulo
+            second &= bit_len
+            computed = (second << (modulo - move_len)) | (second >> move_len)
+        else:
+            first = to_symbolic(first, modulo)
+            second = to_symbolic(second, modulo)
+            move_len = first % modulo
+            second &= bit_len
+            computed = (second << (modulo - move_len)) | (second >> move_len)
+        
+        stack[top-2] = simplify(computed) if is_expr(computed) else computed
+        top -= 1
+
+    # TODO: float number
     elif op in ['f32.abs', 'f64.abs']:
-        stack[top-1] = abs(stack[top-1])
+        first = stack[top-1]
+
+        if is_real(first):
+            computed = abs(first)
+        else:
+            z3_abs = lambda x: If(x >= 0, x, -x)
+            computed = z3_abs(first)
+        
+        computed = simplify(computed) if is_expr(computed) else computed
 
     elif op in ['f32.neg', 'f64.neg']:
         stack[top-1] = -stack[top-1]
@@ -358,14 +735,48 @@ def execute_one_instruction(instruction, stack, locals_value, globals_value, mem
         stack[top-2] = copysign(stack[top-2], stack[top-1])
         top -= 1
 
-    elif op in ['i32.wrap/i64']:
-        stack[top-1] %= 2**32
+    # END: Float
 
+    elif op in ['i32.wrap_i64']:
+        first = stack[top-1]
+        
+        if is_real(first):
+            sign = -1 if first < 0 else 1
+            computed = sign * (abs(first) % 2**32)
+        else:
+            solver.push()
+            solver.add(first < 0)
+            sign = BitVecVal(-1, 32) if check_sat(solver) == sat \
+                else BitVecVal(1, 32)
+            solver.pop()
+
+            z3_abs = lambda x: If(x >= 0, x, -x)
+            first = z3_abs(first)
+            computed = sign * (first % 2**32)
+        
+        stack[top-1] = simplify(computed) if is_expr(computed) else computed
+
+    # TODO: Float-related instructon.
     elif op in ['i32.trunc_s/f32', 'i32.trunc_u/f32', 'i32.trunc_s/f64', 'i32.trunc_u/f64']:
         stack[top-1] = int(stack[top-1])
 
-    elif op in ['i64.extend_s/i32', 'i64.extend_u/i32']:
-        pass
+    elif op in ['i64.extend_i32_s']:
+        first = stack[top-1]
+        if is_real(first):
+            computed = first
+        else:
+            computed = SignExt(32, first)
+        
+        stack[top-1] = simplify(computed) if is_expr(computed) else computed
+    
+    elif op in ['i64.extend_i32_u']:
+        first = stack[top-1]
+        if is_real(first):
+            computed = first & 0xFFFFFFFF
+        else:
+            computed = ZeroExt(32, first)
+        
+        stack[top-1] = simplify(computed) if is_expr(computed) else computed
 
     elif op in ['i64.trunc_s/f32', 'i64.trunc_u/f32', 'i64.trunc_s/f64', 'i64.trunc_u/f64']:  # TODO : Implement the function
         stack[top-1] = int(stack[top-1])

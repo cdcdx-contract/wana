@@ -13,6 +13,40 @@ def is_real(value):
 def is_symbolic(value):
     return not isinstance(value, six.integer_types)
 
+def is_all_real(*args):
+    for elem in args:
+        if is_symbolic(elem):
+            return False
+    return True
+
+def to_symbolic(number, len):
+    if is_real(number):
+        return BitVecVal(number, len)
+    return number
+
+def to_signed(number, len):
+    if number > 2**(len - 1):
+        return (2**len - number) * (-1)
+    else:
+        return number
+
+def to_unsigned(number, len):
+    if number < 0:
+        return number + 2**len
+    else:
+        return number
+
+def check_sat(solver, pop_if_exception=True):
+    try:
+        ret = solver.check()
+        if ret == unknown:
+            raise Z3Exception(solver.reason_unknown())
+    except Exception as e:
+        if pop_if_exception:
+            solver.pop()
+        raise e
+    return ret
+
 def read_u32(bytecode, pos):
     first, second, third, fourth = struct.unpack('BBBB', bytecode[pos:pos+5])
     if (first & 0x80) == 0:
