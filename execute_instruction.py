@@ -10,7 +10,7 @@ def execute_one_instruction(instruction, stack, locals_value, globals_value, mem
     top = len(stack)
 
     if op == 'unreachable':
-        pass
+        raise Exception("Encounter the 'unreachable'('trap')!")
 
     elif op == 'nop':
         pass  # The 'nop' opcode means 'Do nothing'.
@@ -28,7 +28,7 @@ def execute_one_instruction(instruction, stack, locals_value, globals_value, mem
         pass
 
     elif op == 'br':
-        pass
+        targer_address = stack[top-1]
 
     elif op == 'br_if':
         pass
@@ -49,10 +49,22 @@ def execute_one_instruction(instruction, stack, locals_value, globals_value, mem
         top -= 1
 
     elif op == 'select':
-        # TODO
-        # How to fork two different paths
-        if not stack[top-1]:
-            stack[top-3] = stack[top-2]
+        first = stack[top-1]
+        second = stack[top-2]
+        third = stack[top-3]
+        if is_all_real(first, second, third):
+            if first == 0:
+                computed = second
+            else:
+                computed = third
+        else:
+            first = to_symbolic(first)
+            second = to_symbolic(second)
+            third = to_symbolic(third)
+
+            computed = If(first == 0, second, third)
+        
+        stack[top-3] = simplify(computed) if is_expr(computed) else computed
         top -= 2
 
 
@@ -804,6 +816,10 @@ def execute_one_instruction(instruction, stack, locals_value, globals_value, mem
 
     elif op in ['f64.reinterpret/i64']:
         stack[top-1] = struct.unpack('d', struct.pack('L', stack[top-1]))
+
+    else:
+        log.debug('Unknown instruction: ' + opcode)
+        raise Exception('Unknown instruction: ' + opcode)
 
     
     # Correct the size of stack
