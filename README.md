@@ -6,6 +6,19 @@ For EOS testing.
 2. https://github.com/WebAssembly/
 3. https://developer.mozilla.org/en-US/docs/WebAssembly
 
+## Sections of WASM
+1. user 0
+2. type 1
+3. functionDeclarations 3
+4. table 4
+5. memory 5
+6. global 6
+7. export 7
+8. start 8
+9. elem 9
+10. functionDefinitions 10
+11. data 11
+
 ## Types and its char in package 'struct'
 1. @: native order, size & alignment (default)
 2. =: native order, std. size & alignment
