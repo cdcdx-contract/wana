@@ -99,7 +99,7 @@ class Runtime:
             args[i] = execution.Value(e, args[i])
         stack = execution.Stack()
         stack.ext(args)
-        log.debugln(f'Running function {name}({', '.join([str(e) for e in args])}):')
+        log.debugln(f'Running function {name}({", ".join([str(e) for e in args])}):')
         r = execution.call(self.module_instance, func_addr, self.store, stack)
         if r:
             return r[0].n

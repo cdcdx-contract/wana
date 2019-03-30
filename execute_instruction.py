@@ -1387,7 +1387,7 @@ def exec_expr(
                 continue
             if opcode == convention.if_:
                 c = stack.pop().n
-                arity = 0 if i,immediate_arguments == convention.empty else 1
+                arity = 0 if i.immediate_arguments == convention.empty else 1
                 stack.add(Label(arity, expr.composition[pc][-1] + 1))
                 if c != 0:
                     continue
@@ -1449,7 +1449,7 @@ def exec_expr(
                 tab = store.tables[module.tableaddrs[0]]
                 if not 0 <= idx < len(tab.elem):
                     raise Exception('Undefined element index!')
-                r = call(module, table.elem[idx], store, stack)
+                r = call(module, tab.elem[idx], store, stack)
                 stack.ext(r)
                 continue
             continue
@@ -1471,7 +1471,7 @@ def exec_expr(
         if opcode == convention.set_local:
             if i.immediate_arguments >= len(frame.locals):
                 frame.locals.extend(
-                    [Value.from_i32(0) for _ in range(i,immediate_arguments - len(frame.locals) + 1)]
+                    [Value.from_i32(0) for _ in range(i.immediate_arguments - len(frame.locals) + 1)]
                 )
             frame.locals[i.immediate_arguments] = stack.pop()
             continue
