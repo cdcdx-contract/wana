@@ -37,11 +37,17 @@
 import argparse
 import os
 import typing
+import z3
 
-from wana import convention
-from wana import execution
+""" from wana import convention
+from wana import execution_instruction
 from wana import log
-from wana import runtime_structure
+from wana import runtime_structure """
+
+import convention
+import execute_instruction
+import log
+import runtime_structure
 
 class Runtime:
     # A webassembly runtime manages Store, Stack, and other structures.
@@ -49,8 +55,8 @@ class Runtime:
 
     def __init__(self, module: runtime_structure.Module, imps: typing.Dict = None):
         self.module = module
-        self.module_instance = execution.ModuleInstance()
-        self.store = execution.Store()
+        self.module_instance = execute_instruction.ModuleInstance()
+        self.store = execute_instruction.Store()
 
         imps = imps if imps else {}
         externvals = []
@@ -58,31 +64,31 @@ class Runtime:
             if e.module not in imps or e.name not in imps[e.module]:
                 raise Exception(f'Global import {e.module}.{e.name} not found!')
             if e.kind == convention.extern_func:
-                a = execution.HostFunc(self.module.types[e.desc], imps[e.module][e.name])
+                a = execution_instruction.HostFunc(self.module.types[e.desc], imps[e.module][e.name])
                 self.store.funcs.append(a)
-                externvals.append(execution.ExternValue(e.kind, len(self.store.funcs) - 1))
+                externvals.append(execution_instruction.ExternValue(e.kind, len(self.store.funcs) - 1))
                 continue
             if e.kind == convention.extern_table:
                 a = imps[e.module][e.name]
                 self.store.tables.append(a)
-                externvals.append(execution.ExternValue(e.kind, len(self.store.tables) - 1))
+                externvals.append(execution_instruction.ExternValue(e.kind, len(self.store.tables) - 1))
                 continue
             if e.kind == convention.extern_mem:
                 a = imps[e.module][e.name]
                 self.store.mems.append(a)
-                externvals.append(execution.ExternValue(e.kind, len(self.store.mems) - 1))
+                externvals.append(execution_instruction.ExternValue(e.kind, len(self.store.mems) - 1))
                 continue
             if e.kind == convention.extern_global:
-                a = exection.GlobalInstance(execution.Value(e.desc.valtype, imps[e.module][e.name]), e.desc.mut)
+                a = execution_instruction.GlobalInstance(execution_instruction.Value(e.desc.valtype, imps[e.module][e.name]), e.desc.mut)
                 self.store.globals.append(a)
-                externvals.append(execution.ExternValue(e.kind, len(self.store.globals) - 1))
+                externvals.append(execution_instruction.ExternValue(e.kind, len(self.store.globals) - 1))
                 continue
         self.module_instance.instantiate(self.module, self.store, externvals)
 
     def func_addr(self, name: str):
         # Get a function address denoted by the function name.
         for e in self.module_instance.exports:
-            if e. name == name and e.value.extern_type == convention.extern_func:
+            if e.name == name and e.value.extern_type == convention.extern_func:
                 return e.value.address
         raise Exception('Function not found!')
 
@@ -93,14 +99,17 @@ class Runtime:
         # Mapping check for Python valtype to WebAssembly valtype.
         for i, e in enumerate(func.functype.args):
             if e in [convention.i32, convention.i64]:
-                assert isinstance(args[i], int)
+                assert isinstance(args[i], int) or isinstance(args[i], BitVecRef)
+            
+            # [TODO] Float type symbolic executing.
             if e in [convention.f32, convention.f64]:
                 assert isinstance(args[i], float)
-            args[i] = execution.Value(e, args[i])
-        stack = execution.Stack()
+
+            args[i] = execute_instruction.Value(e, args[i])
+        stack = execute_instruction.Stack()
         stack.ext(args)
         log.debugln(f'Running function {name}({", ".join([str(e) for e in args])}):')
-        r = execution.call(self.module_instance, func_addr, self.store, stack)
+        r = execute_instruction.call(self.module_instance, func_addr, self.store, stack)
         if r:
             return r[0].n
         return None
@@ -113,7 +122,7 @@ def on_debug():
 
 def load(name: str, imps: typing.Dict = None) -> Runtime:
     # Generate a runtime by loading a file from disk.
-    with op(name, 'rb') as f:
+    with open(name, 'rb') as f:
         module = runtime_structure.Module.from_reader(f)
         return Runtime(module, imps)
 
@@ -131,8 +140,8 @@ def main():
         vm = load(args.execute[0], args.execute[1])
 
 if __name__ == '__main__':
-    Memory = execution.MemoryInstance
-    Value = execution.Value
-    Table = execution.TableInstance
+    Memory = execute_instruction.MemoryInstance
+    Value = execute_instruction.Value
+    Table = execute_instruction.TableInstance
     Limits = runtime_structure.Limits
     main()

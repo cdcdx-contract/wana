@@ -352,10 +352,15 @@
 import io
 import typing
 
-from wana import common
+""" from wana import common
 from wana import convention
 from wana import log
-from wana import num
+from wana import num """
+
+import common
+import convention
+import log
+import num
 
 class FunctionType:
     # Function types are encoded by the byte 0x60 followed by the respective vectors of parameter and result types.
@@ -485,7 +490,7 @@ class Instruction:
     def __repr__(self):
         if self.immediate_arguments is None:
             return f'{convention.opcodes[self.code][0]}'
-        return f'{convention.opcodes[self.code][0] {self.immediate_arguments}}'
+        return f'{convention.opcodes[self.code][0]} {self.immediate_arguments}'
 
     @classmethod
     def from_reader(cls, r: typing.BinaryIO):
@@ -937,7 +942,7 @@ class TableSection:
         self.vec: typing.List[Table] = []
 
     @classmethod
-    def from_reader(cls, r: typing.BianryIO):
+    def from_reader(cls, r: typing.BinaryIO):
         o = TableSection()
         n = common.read_count(r, 32)
         o.vec = [Table.from_reader(r) for _ in range(n)]
@@ -1049,7 +1054,7 @@ class CodeSection:
         return o
 
 
-  class DataSection:
+class DataSection:
     # The data section has the id 11. It decodes into a vector of data
     # segments that represent the data component of a module.
     #
@@ -1085,7 +1090,7 @@ class Module:
             return cls.from_reader(f)
 
     @classmethod
-    def from_reader(cls, r: typing.BianryIO) -> 'Modulo':
+    def from_reader(cls, r: typing.BinaryIO) -> 'Module':
         if list(r.read(4)) != [0x00, 0x61, 0x73, 0x6d]:
             raise Exception('Invalid magic number!')
         if list(r.read(4)) != [0x01, 0x00, 0x00, 0x00]:

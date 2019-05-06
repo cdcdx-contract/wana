@@ -1,6 +1,7 @@
 import io
 import math
 import struct
+import utils
 
 u8 = i8 = u16 = i16 = u32 = i32 = u64 = i64 = int
 f32 = f64 = float
@@ -247,14 +248,14 @@ def rotl_u32(x: int, k: int):
     k = int2u32(k)
     n = 32
     s = k & (n - 1)
-    return x << s | x >> (n - s)
+    return (x << s | x >> (n - s)) & 0xFFFFFFFF
 
 def rotl_u64(x: int, k: int):
     x = int2u64(x)
     k = int2u64(k)
     n = 64
     s = k & (n - 1)
-    return x << s | x >> (n - s)
+    return (x << s | x >> (n - s)) & 0xFFFFFFFF
 
 def rotr_u32(x: int, k: int):
     return rotl_u32(x, -k)

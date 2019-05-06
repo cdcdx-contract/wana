@@ -243,7 +243,7 @@
 #         else:
 #             first = to_symbolic(first, int(op[1:3]))
 #             second = to_symbolic(second, int(op[1:3]))
-#             computed = If( eq(first, second), BitVecVal(1, int(op[1:3])), BitVecVal(0, int(op[1:3])))
+#             computed = If( first == second, BitVecVal(1, int(op[1:3])), BitVecVal(0, int(op[1:3])))
         
 #         stack[top-2] = simplify(computed) if is_expr(computed) else computed
 #         top -= 1
@@ -856,12 +856,17 @@
 
 import math
 import typing
+import z3
 
-from wana import convention
+""" from wana import convention
 from wana import log
 from wana import num
-from wana import runtime_structure
+from wana import runtime_structure """
 
+import convention
+import log
+import num
+import runtime_structure
 
 class Store:
     # The store represents all global state that can be manipulated by WebAssembly programs. It consists of the runtime
@@ -1189,7 +1194,7 @@ class ModuleInstance:
         stack.add(frame)
         vals = []
         for glob in module.globals:
-            v = exec_expr(store, frame, stack, glob.expr)[0]
+            v = exec_expr(store, frame, stack, glob.expr, -1)[0]
             vals.append(v)
         assert isinstance(stack.pop(), Frame)
 
@@ -1201,14 +1206,14 @@ class ModuleInstance:
         stack.add(frame)
         # For each element segment in module.elem, then do:
         for e in module.elem:
-            offset = exec_expr(store, frame, stack, e.expr)[0]
+            offset = exec_expr(store, frame, stack, e.expr, -1)[0]
             assert offset.valtype == convention.i32
             t = store.tables[self.tableaddrs[e.tableidx]]
             for i, e in enumerate(e.init):
                 t.elem[offset.n + i] = e
         # For each data segment in module.data, then do:
         for e in module.data:
-            offset = exec_expr(store, frame, stack, e.expr)[0]
+            offset = exec_expr(store, frame, stack, e.expr, -1)[0]
             assert offset.valtype == convention.i32
             m = store.mems[self.memaddrs[e.memidx]]
             end = offset.n + len(e.init)
@@ -1302,7 +1307,7 @@ def wasmfunc_call(
     stack.add(frame)
     stack.add(Label(len(f.functype.rets), len(code)))
     # An expression is evaluated relative to a current frame pointing to its containing module instance.
-    r = exec_expr(store, frame, stack, f.code.expr)
+    r = exec_expr(store, frame, stack, f.code.expr, -1)
     # Exit
     if not isinstance(stack.pop(), Frame):
         raise Exception('Signature mismatch in call!')
@@ -1346,17 +1351,21 @@ def exec_expr(
     store: Store,
     frame: Frame,
     stack: Stack,
-    expr: runtime_structure.Expression
+    expr: runtime_structure.Expression,
+    pc: int=-1
 ):
     # An expression is evaluated relative to a current frame pointing to its containing module instance.
     # 1. Jump to the start of the instruction sequence instr∗ of the expression.
     # 2. Execute the instruction sequence.
     # 3. Assert: due to validation, the top of the stack contains a value.
     # 4. Pop the value val from the stack.
+
+    global solver #[TODO] The source of solver.
+    branch_res = []
+
     module = frame.module
     if not expr.data:
         raise Exception('Empty init expr!')
-    pc = -1
     while True:
         pc += 1
         if pc >= len(expr.data):
@@ -1389,13 +1398,57 @@ def exec_expr(
                 c = stack.pop().n
                 arity = 0 if i.immediate_arguments == convention.empty else 1
                 stack.add(Label(arity, expr.composition[pc][-1] + 1))
-                if c != 0:
+                if is_all_real(c):
+                    if c != 0:
+                        continue
+                    if len(expr.composition[pc]) > 2:
+                        pc = expr.composition[pc][1]
+                        continue
+                    pc = expr.composition[pc][-1] - 1
                     continue
-                if len(expr.composition[pc]) > 2:
-                    pc = expr.composition[pc][1]
-                    continue
-                pc = expr.composition[pc][-1] - 1
-                continue
+                else:
+                    c = (c != 0)
+                    solver.push()
+                    solver.add(c)
+                    log.debugln('Branch: left')
+                    try:
+                        if solver.check() == unsat:
+                            log.debugln('Infeasible path detected!')
+                        else:
+                            # Execute the left branch
+                            new_store = store.copy()
+                            new_frame = frame.copy()
+                            new_stack = stack.copy()
+                            new_expr = expr.copy()
+                            new_pc = pc
+                            branch_res += exec_expr(new_store, new_frame, new_stack, new_expr, new_pc)
+                    except TimeoutError:
+                        raise
+                    except Exception as e:
+                        raise
+                    
+                    solver.pop()
+                    solver.push()
+                    solver.add(Not(c))
+                    log.debugln('Branch: right')
+                    try:
+                        if solver.check() == unsat:
+                            log.debugln('Infeasible path detected!')
+                        else:
+                            # Execute the right branch
+                            new_store = store.copy()
+                            new_frame = frame.copy()
+                            new_stack = stack.copy()
+                            new_expr = expr.copy()
+                            new_pc = expr.composition[pc][1]
+                            branch_res += exec_expr(new_store, new_frame, new_stack, new_expr, new_pc)
+                    except TimeoutError:
+                        raise
+                    except Exception as e:
+                        raise
+
+                    return branch_res
+
             if opcode == convention.else_:
                 for i in range(len(stack.data)):
                     i = -1 - i
@@ -1421,6 +1474,55 @@ def exec_expr(
             if opcode == convention.br:
                 pc = spec_br(i.immeiate_arguments, stack)
                 continue
+            if opcode == convention.br_if:
+                c = stack.pop().n
+                if is_all_real(c):
+                    if c == 0:
+                        continue
+                    pc = spec_br(i.immediate_arguments, stack)
+                    continue
+                else:
+                    c = (c == 0)
+                    solver.push()
+                    solver.add(c)
+                    log.debugln('Branch: left')
+                    try:
+                        if solver.check() == unsat:
+                            log.debugln('Infeasible path detected!')
+                        else:
+                            # Execute the left branch
+                            new_store = store.copy()
+                            new_frame = frame.copy()
+                            new_stack = stack.copy()
+                            new_expr = expr.copy()
+                            new_pc = pc
+                            branch_res += exec_expr(new_store, new_frame, new_stack, new_expr, new_pc)
+                    except TimeoutError:
+                        raise
+                    except Exception as e:
+                        raise
+                    
+                    solver.pop()
+                    solver.push()
+                    solver.add(Not(c))
+                    log.debugln('Branch: right')
+                    try:
+                        if solver.check() == unsat:
+                            log.debugln('Infeasible path detected!')
+                        else:
+                            # Execute the right branch
+                            new_store = store.copy()
+                            new_frame = frame.copy()
+                            new_stack = stack.copy()
+                            new_expr = expr.copy()
+                            new_pc = expr.composition[pc][1]
+                            branch_res += exec_expr(new_store, new_frame, new_stack, new_expr, new_pc)
+                    except TimeoutError:
+                        raise
+                    except Exception as e:
+                        raise
+
+                    return branch_res
             if opcode == convention.br_table:
                 a = i.immediate_arguments[0]
                 l = i.immediate_arguments[1]
@@ -1484,6 +1586,8 @@ def exec_expr(
         if opcode == convention.set_global:
             store.globals[module.globaladdrs[i.immediate_arguments]] = GlobalInstance(stack.pop(), True)
             continue
+        
+        # [TODO] Using some approaches to implement byte-store.
         if opcode >= convention.i32_load and opcode <= convention.grow_memory:
             m = store.mems[module.memaddrs[0]]
             if opcode >= convention.i32_load and opcode <= convention.i64_load32_u:
@@ -1505,7 +1609,7 @@ def exec_expr(
                 if opcode == convention.i32_load8_s:
                     stack.add(Value.from_i32(num.LittleEndian.i8(m.data[a:a+1])))
                     continue
-                if opcode == conventin.i32_load8_u:
+                if opcode == convention.i32_load8_u:
                     stack.add(Value.from_i32(num.LittleEndian.u8(m.data[a:a+1])))
                     continue
                 if opcode == convention.i32_load16_s:
@@ -1590,79 +1694,171 @@ def exec_expr(
                 continue
             continue
         if opcode == convention.i32_eqz:
-            stack.add(Value.from_i32(int(stack.pop().n == 0)))
+            a = stack.pop().n
+            if is_all_real(a):
+                computed = int(a == 0)
+            else:
+                computed = If(a == 0, BitVecVal(1, 32), BitVecVal(0, 32))
+            stack.add(Value.from_i32(computed))
             continue
         if opcode >= convention.i32_eq and opcode <= convention.i32_geu:
             b = stack.pop().n
             a = stack.pop().n
             if opcode == convention.i32_eq:
-                stack.add(Value.from_i32(int(a == b)))
+                if is_all_real(a, b):
+                    computed = int(a == b)
+                else:
+                    computed = simplify(If(a == b, BitVecVal(1, 32), BitVecVal(0, 32)))
+                stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_ne:
-                stack.add(Value.from_i32(int(a != b)))
+                if is_all_real(a, b):
+                    computed = int(a != b)
+                else:
+                    computed = simplify(If(a != b, BitVecVal(1, 32), BitVecVal(0, 32)))
+                stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_lts:
-                stack.add(Value.from_i32(int(a < b)))
+                if is_all_real(a, b):
+                    computed = int(a < b)
+                else:
+                    computed = simplify(If(a < b, BitVecVal(1, 32), BitVecVal(0, 32)))
+                stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_ltu:
-                stack.add(Value.from_i32(int(num.int2u32(a) < num.int2u32(b))))
+                if is_all_real(a, b):
+                    computed = int(num.int2u32(a) < num.int2u32(b))
+                else:
+                    computed = simplify(If(ULT(a, b), BitVecVal(1, 32), BitVecVal(0, 32)))
+                stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_gts:
-                stack.add(Value.from_i32(int(a > b)))
+                if is_all_real(a, b):
+                    computed = int(a > b)
+                else:
+                    computed = simplify(If(a > b, BitVecVal(1, 32), BitVecVal(0, 32)))
+                stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_gtu:
-                stack.add(Value.from_i32(int(num.int2u32(a) > num.int2u32(b))))
+                if is_all_real(a, b):
+                    computed = int(num.int2u32(a) > num.int2u32(b))
+                else:
+                    computed = simplify(If(UGT(a, b), BitVecVal(1, 32), BitVecVal(0, 32)))
+                stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_les:
-                stack.add(Value.from_i32(int(a <= b)))
+                if is_all_real(a, b):
+                    computed = int(a <= b)
+                else:
+                    computed = simplify(If(a <= b, BitVecVal(1, 32), BitVecVal(0, 32)))
+                stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_leu:
-                stack.add(Value.from_i32(int(num.int2u32(a) <= num.int2u32(b))))
+                if is_all_real(a, b):
+                    computed = int(num.int2u32(a) <= num.int2u32(b))
+                else:
+                    computed = simplify(If(ULE(a, b), BitVecVal(1, 32), BitVecVal(0, 32)))
+                stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_ges:
-                stack.add(Value.from_i32(int(a >= b)))
+                if is_all_real(a, b):
+                    computed = int(a >= b)
+                else:
+                    computed = simpify(If(a >= b, BitVecVal(1, 32), BitVecVal(0, 32)))
+                stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_geu:
-                stack.add(Value.from_i32(int(num.int2u32(a) >= num.int2u32(b))))
+                if is_all_real(a, b):
+                    computed = int(num.int2u32(a) >= num.int2u32(b))
+                else:
+                    computed = simplify(If(UGE(a, b), BitVecVal(1, 32), BitVecVal(0, 32)))
+                stack.add(Value.from_i32(computed))
                 continue
             continue
         if opcode == convention.i64_eqz:
-            stack.add(Value.from_i32(int(stack.pop().n == 0)))
+            a = stack.pop().n
+            if is_all_real(a):
+                computed = int(a == 0)
+            else:
+                computed = simplify(If(a == 0, BitVecVal(1, 32), BitVecVal(0, 32)))
+            stack.add(Value.from_i32(computed))
             continue
         if opcode >= convention.i64_eq and opcode <= convention.i64_geu:
             b = stack.pop().n
             a = stack.pop().n
             if opcode == convention.i64_eq:
-                stack.add(Value.from_i32(int(a == b)))
+                if is_all_real(a, b):
+                    computed = int(a == b)
+                else:
+                    computed = simplify(If(a == b, BitVecVal(1, 32), BitVecVal(0, 32)))
+                stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i64_ne:
-                stack.add(Value.from_i32(int(a != b)))
+                if is_all_real(a, b):
+                    computed = int(a != b)
+                else:
+                    computed = simplify(If(a != b, BitVecVal(1, 32), BitVecVal(0, 32)))
+                stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i64_lts:
-                stack.add(Value.from_i32(int(a < b)))
+                if is_all_real(a, b):
+                    computed = int(a < b)
+                else:
+                    computed = simplify(If(a < b, BitVecVal(1, 32), BitVecVal(0, 32)))
+                stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i64_ltu:
-                stack.add(Value.from_i32(int(num.int2u64(a) < num.int2u64(b))))
+                if is_all_real(a, b):
+                    computed = int(num.int2u64(a) < num.int2u64(b))
+                else:
+                    computed = simplify(If(ULT(a, b), BitVecVal(1, 32), BitVecVal(0, 32)))
+                stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i64_gts:
-                stack.add(Value.from_i32(int(a > b)))
+                if is_all_real(a, b):
+                    computed = int(a > b)
+                else:
+                    computed = simplify(If(a > b, BitVecVal(1, 32), BitVecVal(0, 32)))
+                stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i64_gtu:
-                stack.add(Value.from_i32(int(num.int2u64(a) > num.int2u64(b))))
+                if is_all_real(a, b):
+                    computed = int(num.int2u64(a) > num.int2u64(b))
+                else:
+                    computed = simplify(If(UGT(a, b), BitVecVal(1, 32), BitVecVal(0, 32)))
+                stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i64_les:
-                stack.add(Value.from_i32(int(a <= b)))
+                if is_all_real(a, b):
+                    computed = int(a <= b)
+                else:
+                    computed = simplify(If(a <= b, BitVecVal(1, 32), BitVecVal(0, 32)))
+                stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i64_leu:
-                stack.add(Value.from_i32(int(num.int2u64(a) <= num.int2u64(b))))
+                if is_all_real(a, b):
+                    computed = int(num.int2u64(a) <= num.int2u64(b))
+                else:
+                    computed = simplify(If(ULE(a, b), BitVecVal(1, 32), BitVecVal(0, 32)))
+                stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i64_ges:
-                stack.add(Value.from_i32(int(a >= b)))
+                if is_all_real(a, b):
+                    computed = int(a >= b)
+                else:
+                    computed = simplify(If(a >= b, BitVecVal(1, 32), BitVecVal(0, 32)))
+                stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i64_geu:
-                stack.add(Value.from_i32(int(num.int2u64(a) >= num.int2u64(b))))
+                if is_all_real(a, b):
+                    computed = int(num.int2u64(a) >= num.int2u64(b))
+                else:
+                    computed = simplify(If(UGE(a, b), BitVecVal(1, 32), BitVecVal(0, 32)))
+                stack.add(Value.from_i32(computed))
                 continue
             continue
+
+        # [TODO] Float number processing.
         if opcode >= convention.f32_eq and opcode <= convention.f64_ge:
             b = stack.pop().n
             a = stack.pop().n
@@ -1703,6 +1899,8 @@ def exec_expr(
                 stack.add(Value.from_i32(int(a >= b)))
                 continue
             continue
+
+        # [TODO] Difficulty to symbolic executation.
         if opcode >= convention.i32_clz and opcode <= convention.i32_popcnt:
             a = stack.pop().n
             if opcode == convention.i32_clz:
@@ -1728,6 +1926,8 @@ def exec_expr(
                 stack.add(Value.from_i32(c))
                 continue
             continue
+
+
         if opcode >= convention.i32_add and opcode <= convention.i32_rotr:
             b = stack.pop().n
             a = stack.pop().n
@@ -1737,53 +1937,147 @@ def exec_expr(
                 convention.i32_rems,
                 convention.i32_remu,
             ]:
-                if b == 0:
+                if is_all_real(b) and b == 0:
                     raise Exception('Integer divide by zero!')
+                elif not is_all_real(b):
+                    solver.push()
+                    solver.add(Not(b == 0))
+                    if check_sat(solver) == unsat:
+                        raise Exception('Integer divide by zero!')
+                    solver.pop()
             if opcode == convention.i32_add:
-                stack.add(Value.from_i32(num.int2i32(a + b)))
+                if is_all_real(a, b):
+                    computed = num.int2i32(a + b)
+                else:
+                    computed = simplify(a + b)
+                stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_sub:
-                stack.add(Value.from_i32(num.int2i32(a - b)))
+                if is_all_real(a, b):
+                    computed = num.int2i32(a - b)
+                else:
+                    computed = simplify(a - b)
+                stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_mul:
-                stack.add(Value.from_i32(num.int2i32(a * b)))
+                if is_all_real(a, b):
+                    computed = int2i32(a * b)
+                else:
+                    computed = simplify(a * b)
+                stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_divs:
-                if a == 0x8000000 and b == -1:
-                    raise Exception('Integer overflow!')
-                stack.add(Value.from_i32(num.idiv_s(a, b)))
+                if is_all_real(a, b):
+                    if a == 0x8000000 and b == -1:
+                        raise Exception('Integer overflow!')
+                    computed = num.idiv_s(a, b)
+                else:
+                    a, b = to_symbolic(a, 32), to_symbolic(b, 32)
+                    solver.push()
+                    solver.add((a / b) < 0)
+                    sign = -1 if check_sat(solver) == sat else 1
+                    sym_abs = lambda x: If(x >= 0, x, -x)
+                    a, b = sym_abs(a), sym_abs(b)
+                    computed = simplify(sign * (a / b))
+                    solver.pop()
+                stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_divu:
-                stack.add(Value.from_i32(num.int2i32(num.int2u32(a) // num.int.int2u32(b))))
+                if is_all_real(a, b):
+                    computed = num.int2i32(num.int2u32(a) // num.int.int2u32(b))
+                else:
+                    a, b = to_symbolic(a, 32), to_symbolic(b, 32)
+                    computed = simplify(UDiv(a, b))
+                stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_rems:
-                stack.add(Value.from_i32(num.irem_s(a, b)))
+                if is_all_real(a, b):
+                    computed = num.irem_s(a, b)
+                else:
+                    a, b = to_symbolic(a, 32), to_symbolic(b, 32)
+                    solver.push()
+                    solver.add(a < 0)
+                    sign = -1 if check_sat(solver) == sat else 1
+                    solver.pop()
+                    sym_abs = lambda x: If(x >= 0, x, -x)
+                    a, b = sym_abs(a), sym_abs(b)
+                    computed = simplify(sign * (a % b))
+                stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_remu:
-                stack.add(Value.from_i32(num.int2i32(num.int2u32(a) % num.int2u32(b))))
+                if is_all_real(a, b):
+                    computed = num.int2i32(num.int2u32(a) % num.int2u32(b))
+                else:
+                    a, b = to_symbolic(a, 32), to_symbolic(b, 32)
+                    computed = simplify(URem(a, b))
+                stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_and:
-                stack.add(Value.from_i32(a & b))
+                computed = a & b
+                if is_expr(computed):
+                    computed = simplify(computed)
+                stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_or:
-                stack.add(Value.from_i32(a | b))
+                computed = a | b
+                if is_expr(computed):
+                    computed = simplify(computed)
+                stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_xor:
-                stack.add(Value.from_i32(a ^ b))
+                computed = a ^ b
+                if is_expr(computed):
+                    computed = simplify(computed)
+                stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_shl:
-                stack.add(Value.from_i32(num.int2i32(a << (b % 0x20))))
+                if is_all_real(a, b):
+                    computed = num.int2i32(a << (b % 0x20))
+                else:
+                    computed = simplify(a << (b & 0x1F)) # [TODO] Two implementation " & 0x1F" and " % 0x20" are equvalent.
+                stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_shrs:
-                stack.add(Value.from_i32(num.int2u32(a) >> (b % 0x20)))
+                if is_all_real(a, b):
+                    computed = a >> (b % 0x20)
+                else:
+                    computed = simplify(a >> (b & 0x1F))
+                stack.add(Value.from_i32(computed))
+                continue
+            if opcode == convention.i32_shru:
+                if is_all_real(a, b):
+                    computed = num.int2u32(a) >> (b % 0x20)
+                elif is_all_real(a) and is_symbolic(b):
+                    computed = simplify(num.int2u32(a) >> (b & 0x1F))
+                else:
+                    b = to_symbolic(b, 32)
+                    computed = simplify(If((a & 0x80000000) == 0x80000000, 
+                                        ((a & 0x7FFFFFFF) >> (b & 0x1F)) + (0x80000000 >> (b & 0x1F)),
+                                        ((a & 0x7FFFFFFF) >> (b & 0x1F))))
+                stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_rotl:
-                stack.add(Value.from_i32(num.int2i32(num.rotl_u32(a, b))))
+                if is_all_real(a, b):
+                    computed = num.int2i32(num.rotl_u32(a, b))
+                else:
+                    a, b = to_symbolic(a, 32), to_symbolic(b, 32)
+                    b &= 0x1F    # b = b % 0x20
+                    a, b = Concat(BitVecVal(0, 1), a), Concat(BitVecVal(0, 1), b)  # "32bit -> 33bit" for unsigned shift right.
+                    computed = simplify(Extract(31, 0, (a << b) | (a >> (31 - b))))
+                stack.add(Value.from_i32(computed))
                 continue
-            if opcode == convention.i21_rotr:
-                stack.add(Value.from_i32(num.int2i32(num.rotr_u32(a, b))))
+            if opcode == convention.i32_rotr:
+                if is_all_real(a, b):
+                    computed = num.int2i32(num.rotr_u32(a, b))
+                else:
+                    a, b = to_symbolic(a, 32), to_symbolic(b, 32)
+                    b &= 0x1F
+                    a, b = Concat(BitVecVal(0, 1), a), Concat(BitVecVal(0, 1), b)
+                    computed = simplify(Extract(31, 0, (a >> b) | a << (31 - b)))
+                stack.add(Value.from_i32(num.int2i32(computed)))
                 continue
             continue
+        # [TODO] Diffculty to find an approach to implement the instruction.
         if opcode >= convention.i64_clz and opcode <= convention.i64_popcnt:
             a = stack.pop().n
             if opcode == convention.i64_clz:
@@ -1821,51 +2115,144 @@ def exec_expr(
                 convention.i64_rems,
                 convention.i64_remu,
             ]:
-                if b == 0:
-                    raise Exception('pywasm: integer divide by zero')
+                if is_all_real(b) and b == 0:
+                    raise Exception('Integer divide by zero!')
+                elif not is_all_real(b):
+                    solver.push()
+                    solver.add(Not(b == 0))
+                    if check_sat(solver) == unsat:
+                        raise Exception('Integer divide by zero!')
+                    solver.pop()
             if opcode == convention.i64_add:
-                stack.add(Value.from_i64(num.int2i64(a + b)))
+                if is_all_real(a, b):
+                    computed = num.int2i64(a + b)
+                else:
+                    computed = simplify(a + b)
+                stack.add(Value.from_i64(computed))
                 continue
             if opcode == convention.i64_sub:
-                stack.add(Value.from_i64(num.int2i64(a - b)))
+                if is_all_real(a, b):
+                    computed = num.int2i64(a - b)
+                else:
+                    computed = simplify(a - b)
+                stack.add(Value.from_i64(computed))
                 continue
             if opcode == convention.i64_mul:
-                stack.add(Value.from_i64(num.int2i64(a * b)))
+                if is_all_real(a, b):
+                    computed = num.int2i64(a * b)
+                else:
+                    computed = simplify(a * b)
+                stack.add(Value.from_i64(computed))
                 continue
             if opcode == convention.i64_divs:
-                stack.add(Value.from_i64(num.idiv_s(a, b)))
+                if is_all_real(a, b):
+                    if a == 0x80000000 and b == -1:
+                        raise Exception('Integer overflow!')
+                    computed = num.idiv_s(a, b)
+                else:
+                    a, b = to_symbolic(a, 64), to_symbolic(b, 64)
+                    solver.push()
+                    solver.add((a / b) < 0)
+                    sign = -1 if check_sat(solver) == sat else 1
+                    sym_abs = lambda x: If(x >= 0, x, -x)
+                    a, b = sym_abs(a), sym_abs(b)
+                    computed = simplify(sign * (a / b))
+                    solver.pop()
+                stack.add(Value.from_i64(computed))
                 continue
             if opcode == convention.i64_divu:
-                stack.add(Value.from_i64(num.int2i64(num.int2u64(a) // num.int2u64(b))))
+                if is_all_real(a, b):
+                    computed = num.int2i64(num.int2u64(a) // num.int2u64(b))
+                else:
+                    a, b = to_symbolic(a, 64), to_symbolic(b, 64)
+                    computed = simplify(UDiv(a, b))
+                stack.add(Value.from_i64(num.int2i64(computed)))
                 continue
             if opcode == convention.i64_rems:
-                stack.add(Value.from_i64(num.irem_s(a, b)))
+                if is_all_real(a, b):
+                    computed = num.irem_s(a, b)
+                else:
+                    a, b = to_symbolic(a, 64), to_symbolic(b, 64)
+                    solver.push()
+                    solver.add(a < 0)
+                    sign = -1 if check_sat(solver) == sat else 1
+                    solver.pop()
+                    sym_abs = lambda x: If(x >= 0, x, -x)
+                    a, b = sym_abs(a), sym_abs(b)
+                    computed = simplify(sign * (a % b))
+                stack.add(Value.from_i64(computed))
+                continue
             if opcode == convention.i64_remu:
-                stack.add(Value.from_i64(num.int2u64(a) % num.int2u64(b)))
+                if is_all_real(a, b):
+                    computed = num.int2i32(num.int2u64(a) % num.int2u64(b))
+                else:
+                    a, b = to_symbolic(a, 64), to_symbolic(b, 64)
+                    computed = simplify(URem(a, b))
+                stack.add(Value.from_i64(computed))
                 continue
             if opcode == convention.i64_and:
-                stack.add(Value.from_i64(a & b))
+                computed = a & b
+                if is_expr(computed):
+                    computed = simplify(computed)
+                stack.add(Value.from_i64(computed))
                 continue
             if opcode == convention.i64_or:
-                stack.add(Value.from_i64(a | b))
+                computed = a | b
+                if is_expr(computed):
+                    computed = simplify(computed)
+                stack.add(Value.from_i64(computed))
                 continue
             if opcode == convention.i64_xor:
-                stack.add(Value.from_i64(a ^ b))
+                computed = a ^ b
+                if is_expr(computed):
+                    computed = simplify(computed)
+                stack.add(Value.from_i64(computed))
                 continue
             if opcode == convention.i64_shl:
-                stack.add(Value.from_i64(num.int2i64(a << (b % 0x40))))
+                if is_all_real(a, b):
+                    computed = num.int2i64(a << (b % 0x40))
+                else:
+                    computed = simplify(a << (b & 0x3F))
+                stack.add(Value.from_i64(num.int2i64(computed)))
                 continue
             if opcode == convention.i64_shrs:
-                stack.add(Value.from_i64(a >> (b % 0x40)))
+                if is_all_real(a, b):
+                    computed = a >> (b % 0x40)
+                else:
+                    computed = simplify(a >> (b & 0x3F))
+                stack.add(Value.from_i64(computed))
                 continue
             if opcode == convention.i64_shru:
-                stack.add(Value.from_i64(num.int2u64(a) >> (b % 0x40)))
+                if is_all_real(a, b):
+                    computed = num.int2u64(a) >> (b % 0x40)
+                elif is_all_real(a) and is_symbolic(b):
+                    computed = simplify(num.int2u64(a) >> (b & 0x3F))
+                else:
+                    b = to_symbolic(b, 64)
+                    computed = simplify(If((a & 0x8000000000000000) == 0x8000000000000000,
+                                        ((a & 0x7FFFFFFFFFFFFFFF) >> (b & 0x3F)) + (0x8000000000000000 >> (b & 0x3F)),
+                                        ((a & 0x7FFFFFFFFFFFFFFF) >> (b & 0x3F))))
+                stack.add(Value.from_i64(computed))
                 continue
             if opcode == convention.i64_rotl:
-                stack.add(Value.from_i64(num.int2i64(num.rotl_u64(a, b))))
+                if is_all_real(a, b):
+                    computed = num.int2i64(num.rotr_u64(a, b))
+                else:
+                    a, b = to_symbolic(a, 64), to_symbolic(b, 64)
+                    b &= 0x3F
+                    a, b = Concat(BitVecVal(0, 1), a), Concat(BitVecVal(0, 1), b)
+                    computed = simplify(Extract(63, 0, (a << b) | (a >> (63 - b))))
+                stack.add(Value.from_i64(computed))
                 continue
             if opcode == convention.i64_rotr:
-                stack.add(Value.from_i64(num.int2i64(num.rotr_u64(a, b))))
+                if is_all_real(a, b):
+                    computed = num.int2i64(num.rotr_u64(a, b))
+                else:
+                    a, b = to_symbolic(a, 64), to_symbolic(b, 64)
+                    b &= 0x3F
+                    a, b = Concat(BitVecVal(0, 1), a), Concat(BitVecVal(0, 1), b)
+                    computed = simplify(Extract(63, 0, (a >> b) | (a << (63 - b))))
+                stack.add(Value.from_i64(computed))
                 continue
             continue
         if opcode >= convention.f32_abs and opcode <= convention.f32_sqrt:
