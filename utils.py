@@ -1,5 +1,6 @@
 import six
 import struct
+import z3
 
 def is_int(value: int) -> bool:
     return isinstance(value, six.integer_types)
@@ -18,7 +19,7 @@ def is_all_real(*args) -> bool:
 
 def to_symbolic(number: int, len: int) -> 'BitVecVal':
     if is_int(number):
-        return BitVecVal(number, len)
+        return z3.BitVecVal(number, len)
     return number
 
 def to_signed(number: int, len: int) -> int:
@@ -36,8 +37,8 @@ def to_unsigned(number: int, len: int) -> int:
 def check_sat(solver: 'Solver', pop_if_exception: bool=True) -> 'State':
     try:
         ret = solver.check()
-        if ret == unknown:
-            raise Z3Exception(solver.reason_unknown())
+        if ret == z3.unknown:
+            raise z3.Z3Exception(solver.reason_unknown())
     except Exception as e:
         if pop_if_exception:
             solver.pop()

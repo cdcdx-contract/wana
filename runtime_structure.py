@@ -361,6 +361,7 @@ import common
 import convention
 import log
 import num
+from utils import *
 
 class FunctionType:
     # Function types are encoded by the byte 0x60 followed by the respective vectors of parameter and result types.
@@ -571,7 +572,7 @@ class Expression:
         o = Expression()
         d = 1
         while True:
-            i = Instruction.from_read(r)
+            i = Instruction.from_reader(r)
             if not i:
                 break
             o.data.append(i)
@@ -830,7 +831,7 @@ class Import:
     def __repr__(self):
         if self.kind == convention.extern_func:
             return f'{self.module}.{self.name} -> Function[{self.desc}]'
-        if self.kind -- convention.extern_table:
+        if self.kind == convention.extern_table:
             return f'{self.module}.{self.name} -> Table[{self.desc}]'
         if self.kind == convention.extern_mem:
             return f'{self.module}.{self.name} -> Memory[{self.desc}]'
@@ -961,7 +962,7 @@ class MemorySection:
     def from_reader(cls, r: typing.BinaryIO):
         o = MemorySection()
         n = common.read_count(r, 32)
-        o.vec = [Memory.from_reader for _ in range(n)]
+        o.vec = [Memory.from_reader(r) for _ in range(n)]
         return o
 
 
@@ -1067,7 +1068,7 @@ class DataSection:
     def from_reader(cls, r: typing.BinaryIO):
         o = DataSection()
         n = common.read_count(n, 32)
-        o.vec = [DateSegment.from_reader(r) for _ in range(n)]
+        o.vec = [DataSegment.from_reader(r) for _ in range(n)]
         return o
 
 
@@ -1115,12 +1116,12 @@ class Module:
                 for i, e in enumerate(type_section.vec):
                     log.debugln(f'{convention.section[section_id][0]:>9}[{i}] {e}')
                 mod.types = type_section.vec
-            elif section.id == convention.import_section:
+            elif section_id == convention.import_section:
                 import_section = ImportSection.from_reader(io.BinaryIO(data))
                 for i, e in enumerate(import_section.vec):
                     log.debugln(f'{convention.section[section_id][0]:>9}[{i}] {e}')
                 mod.imports = import_section.vec
-            elif section.id == convention.function_section:
+            elif section_id == convention.function_section:
                 function_section = FunctionSection.from_reader(io.BytesIO(data))
                 num_imported_funcs = sum(1 for _ in filter(lambda i: i.kind == convention.extern_func, mod.imports))
                 for i, e in enumerate(function_section.vec):
@@ -1133,6 +1134,11 @@ class Module:
             elif section_id == convention.memory_section:
                 memory_section = MemorySection.from_reader(io.BytesIO(data))
                 for i, e in enumerate(memory_section.vec):
+                    log.debugln(f'{convention.section[section_id][0]:>9}[{i}] {e}')
+                mod.mems = memory_section.vec
+            elif section_id == convention.global_section:
+                global_section = GlobalSection.from_reader(io.BytesIO(data))
+                for i, e in enumerate(global_section.vec):
                     log.debugln(f'{convention.section[section_id][0]:>9}[{i}] {e}')
                 mod.mems = memory_section.vec
             elif section_id == convention.export_section:
@@ -1164,7 +1170,7 @@ class Module:
                             log.debugln(f'{a}')
                         elif e.immediate_arguments is None:
                             log.debugln(f'{a}')
-                        elif isinstacne(e.immediate_arguments, list):
+                        elif isinstance(e.immediate_arguments, list):
                             log.debugln(f'{a} {" ".join([str(e) for e in e.immediate_arguments])}')
                         else:
                             log.debugln(f'{a} {e.immediate_arguments}')

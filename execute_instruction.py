@@ -53,9 +53,9 @@
 #     elif op == 'br':
 
 #         targer_address = stack[top-1]
-#         if is_symbolic(target_address):
+#         if utils.is_symbolic(target_address):
 #             try:
-#                 target_address = int(str(simplify(target_address)))
+#                 target_address = int(str(z3.simplify(target_address)))
 #             except:
 #                 raise TypeError("Target address must be an integer")
 
@@ -81,19 +81,19 @@
 #         first = stack[top-1]
 #         second = stack[top-2]
 #         third = stack[top-3]
-#         if is_all_real(first, second, third):
+#         if utils.is_all_real(first, second, third):
 #             if first == 0:
 #                 computed = second
 #             else:
 #                 computed = third
 #         else:
-#             first = to_symbolic(first)
-#             second = to_symbolic(second)
-#             third = to_symbolic(third)
+#             first = utils.to_symbolic(first)
+#             second = utils.to_symbolic(second)
+#             third = utils.to_symbolic(third)
 
-#             computed = If(first == 0, second, third)
+#             computed = z3.If(first == 0, second, third)
         
-#         stack[top-3] = simplify(computed) if is_expr(computed) else computed
+#         stack[top-3] = z3.simplify(computed) if z3.is_expr(computed) else computed
 #         top -= 2
 
 
@@ -228,24 +228,24 @@
 #             else:
 #                 computed = 0
 #         else:
-#             computed = If(first == 0, BitVecVal(1, int(op[1:3])), BitVecVal(0, int(op[1:3])))
+#             computed = z3.If(first == 0, z3.BitVecVal(1, int(op[1:3])), z3.BitVecVal(0, int(op[1:3])))
         
-#         stack[top-1] = simplify(computed) if is_expr(computed) else computed
+#         stack[top-1] = z3.simplify(computed) if z3.is_expr(computed) else computed
 
 #     elif op in ['i32.eq', 'i64.eq']:
 #         first = stack[top-1]
 #         second = stack[top-2]
-#         if is_all_real(first, second):
+#         if utils.is_all_real(first, second):
 #             if first == second:
 #                 computed = 1
 #             else:
 #                 computed = 0
 #         else:
-#             first = to_symbolic(first, int(op[1:3]))
-#             second = to_symbolic(second, int(op[1:3]))
-#             computed = If( first == second, BitVecVal(1, int(op[1:3])), BitVecVal(0, int(op[1:3])))
+#             first = utils.to_symbolic(first, int(op[1:3]))
+#             second = utils.to_symbolic(second, int(op[1:3]))
+#             computed = z3.If( first == second, z3.BitVecVal(1, int(op[1:3])), z3.BitVecVal(0, int(op[1:3])))
         
-#         stack[top-2] = simplify(computed) if is_expr(computed) else computed
+#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
 #         top -= 1
 
 #     elif op in ['f32.eq', 'f64.eq']:
@@ -254,17 +254,17 @@
 #     elif op in ['i32.ne', 'i64.ne']:
 #         first = stack[top-1]
 #         second = stack[top-2]
-#         if is_all_real(first, second):
+#         if utils.is_all_real(first, second):
 #             if first != second:
 #                 computed = 1
 #             else:
 #                 computed = 0
 #         else:
-#             first = to_symbolic(first, int(op[1:3]))
-#             second = to_symbolic(second, int(op[1:3]))
-#             computed = If( eq(first, second), BitVecVal(0, int(op[1:3])), BitVecVal(1, int(op[1:3])))
+#             first = utils.to_symbolic(first, int(op[1:3]))
+#             second = utils.to_symbolic(second, int(op[1:3]))
+#             computed = z3.If( eq(first, second), z3.BitVecVal(0, int(op[1:3])), z3.BitVecVal(1, int(op[1:3])))
         
-#         stack[top-2] = simplify(computed) if is_expr(computed) else computed
+#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
 #         top -= 1
     
 #     elif op in ['f32.ne', 'f64.ne']:
@@ -273,29 +273,29 @@
 #     elif op in ['i32.lt_u', 'i64.lt_u']:
 #         first = stack[top-1]
 #         second = stack[top-2]
-#         if is_all_real(first, second):
+#         if utils.is_all_real(first, second):
 #             if first < second:
 #                 computed = 1
 #             else:
 #                 computed = 0
 #         else:
-#             computed = If(ULT(first, second), BitVecVal(1, int(op[1:3])), BitVecVal(0, Int(op[1:3])))
+#             computed = z3.If(ULT(first, second), z3.BitVecVal(1, int(op[1:3])), z3.BitVecVal(0, Int(op[1:3])))
         
-#         stack[top-2] = simplify(computed) if is_expr(computed) else computed
+#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
 #         top -= 1
 
 #     elif op in ['i32.lt_s', 'i64.lt_s']:
 #         first = stack[top-1]
 #         second = stack[top-2]
-#         if is_all_real(first, second):
+#         if utils.is_all_real(first, second):
 #             if first < second:
 #                 computed = 1
 #             else:
 #                 computed = 0
 #         else:
-#             computed = If(first < second, BitVecVal(1, int(op[1:3])), BitVecVal(0, Int(op[1:3])))
+#             computed = z3.If(first < second, z3.BitVecVal(1, int(op[1:3])), z3.BitVecVal(0, Int(op[1:3])))
         
-#         stack[top-2] = simplify(computed) if is_expr(computed) else computed
+#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
 #         top -= 1
 
 #     elif op in ['f32.lt', 'f64.lt']:
@@ -304,29 +304,29 @@
 #     elif op in ['i32.gt_u', 'i64.gt_u']:
 #         first = stack[top-1]
 #         second = stack[top-2]
-#         if is_all_real(first, second):
+#         if utils.is_all_real(first, second):
 #             if first < second:
 #                 computed = 1
 #             else:
 #                 computed = 0
 #         else:
-#             computed = If(UGT(first, second), BitVecVal(1, int(op[1:3])), BitVecVal(0, Int(op[1:3])))
+#             computed = z3.If(z3.UGT(first, second), z3.BitVecVal(1, int(op[1:3])), z3.BitVecVal(0, Int(op[1:3])))
         
-#         stack[top-2] = simplify(computed) if is_expr(computed) else computed
+#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
 #         top -= 1
 
 #     elif op in ['i32.gt_s', 'i64.gt_s']:
 #         first = stack[top-1]
 #         second = stack[top-2]
-#         if is_all_real(first, second):
+#         if utils.is_all_real(first, second):
 #             if first < second:
 #                 computed = 1
 #             else:
 #                 computed = 0
 #         else:
-#             computed = If(first > second, BitVecVal(1, int(op[1:3])), BitVecVal(0, Int(op[1:3])))
+#             computed = z3.If(first > second, z3.BitVecVal(1, int(op[1:3])), z3.BitVecVal(0, Int(op[1:3])))
         
-#         stack[top-2] = simplify(computed) if is_expr(computed) else computed
+#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
 #         top -= 1
 
 #     elif op in ['f32.gt', 'f64.gt']:
@@ -335,29 +335,29 @@
 #     elif op in ['i32.le_u', 'i64.le_u']:
 #         first = stack[top-1]
 #         second = stack[top-2]
-#         if is_all_real(first, second):
+#         if utils.is_all_real(first, second):
 #             if first < second:
 #                 computed = 1
 #             else:
 #                 computed = 0
 #         else:
-#             computed = If(ULE(first, second), BitVecVal(1, int(op[1:3])), BitVecVal(0, Int(op[1:3])))
+#             computed = z3.If(z3.ULE(first, second), z3.BitVecVal(1, int(op[1:3])), z3.BitVecVal(0, Int(op[1:3])))
         
-#         stack[top-2] = simplify(computed) if is_expr(computed) else computed
+#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
 #         top -= 1
 
 #     elif op in ['i32.le_s', 'i64.le_s']:
 #                 first = stack[top-1]
 #         second = stack[top-2]
-#         if is_all_real(first, second):
+#         if utils.is_all_real(first, second):
 #             if first < second:
 #                 computed = 1
 #             else:
 #                 computed = 0
 #         else:
-#             computed = If(first <= second, BitVecVal(1, int(op[1:3])), BitVecVal(0, Int(op[1:3])))
+#             computed = z3.If(first <= second, z3.BitVecVal(1, int(op[1:3])), z3.BitVecVal(0, Int(op[1:3])))
         
-#         stack[top-2] = simplify(computed) if is_expr(computed) else computed
+#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
 #         top -= 1
 
 #     elif op in ['f32.le', 'f64.le']:
@@ -366,29 +366,29 @@
 #     elif op in ['i32.ge_u', 'i64.ge_u']:
 #         first = stack[top-1]
 #         second = stack[top-2]
-#         if is_all_real(first, second):
+#         if utils.is_all_real(first, second):
 #             if first < second:
 #                 computed = 1
 #             else:
 #                 computed = 0
 #         else:
-#             computed = If(UGE(first, second), BitVecVal(1, int(op[1:3])), BitVecVal(0, Int(op[1:3])))
+#             computed = z3.If(UGE(first, second), z3.BitVecVal(1, int(op[1:3])), z3.BitVecVal(0, Int(op[1:3])))
         
-#         stack[top-2] = simplify(computed) if is_expr(computed) else computed
+#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
 #         top -= 1
 
 #     elif op in ['i32.ge_s',  'i64.ge_s']:
 #         first = stack[top-1]
 #         second = stack[top-2]
-#         if is_all_real(first, second):
+#         if utils.is_all_real(first, second):
 #             if first < second:
 #                 computed = 1
 #             else:
 #                 computed = 0
 #         else:
-#             computed = If(first >= second, BitVecVal(1, int(op[1:3])), BitVecVal(0, Int(op[1:3])))
+#             computed = z3.If(first >= second, z3.BitVecVal(1, int(op[1:3])), z3.BitVecVal(0, Int(op[1:3])))
         
-#         stack[top-2] = simplify(computed) if is_expr(computed) else computed
+#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
 #         top -= 1
 
 #     elif op in ['f32.ge', 'f64.ge']:
@@ -422,70 +422,70 @@
 #     elif op in ['i32.add', 'i64.add']:
 #         first = stack[top-1]
 #         second = stack[top-2]
-#         if is_real(first) and is_symbolic(second):
-#             first = BitVecVal(first, int(op[1:3]))
+#         if is_real(first) and utils.is_symbolic(second):
+#             first = z3.BitVecVal(first, int(op[1:3]))
 #             computed = first + second
-#         elif is_symbolic(first) and is_real(second):
-#             second = BitVecVal(second, int(op[1:3]))
+#         elif utils.is_symbolic(first) and is_real(second):
+#             second = z3.BitVecVal(second, int(op[1:3]))
 #             computed = first + second
 #         else:
 #             computed = (first + second) % (2 ** 32)
 
-#         stack[top-2] = simplify(computed) if is_expr(computed) else computed
+#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
 #         top -= 1
 
 #     elif op in ['i32.sub', 'i64.sub']:
 #         first = stack[top-1]
 #         second = stack[top-2]
-#         if is_real(first) and is_symbolic(second):
-#             first = BitVecVal(first, int(op[1:3]))
+#         if is_real(first) and utils.is_symbolic(second):
+#             first = z3.BitVecVal(first, int(op[1:3]))
 #             computed = first - second
-#         elif is_symbolic(first) and is_real(second):
-#             second = BitVecVal(second, int(op[1:3]))
+#         elif utils.is_symbolic(first) and is_real(second):
+#             second = z3.BitVecVal(second, int(op[1:3]))
 #             computed = first - second
 #         else:
 #             computed = (first - second) % (2 ** int(op[1:3]))
         
-#         stack[top-2] = simplify(computed) if is_expr(computed) else computed
+#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
 #         top -= 1
 
 #     elif op in ['i32.mul', 'i64.mul']:
 #         first = stack[top-1]
 #         second = stack[top-2]
-#         if is_real(first) and is_symbolic(second):
-#             first = BitVecVal(first, int(op[1:3]))
-#         elif is_symbolic(first) and is_real(second):
-#             second = BitVecVal(second, int(op[1:3]))
+#         if is_real(first) and utils.is_symbolic(second):
+#             first = z3.BitVecVal(first, int(op[1:3]))
+#         elif utils.is_symbolic(first) and is_real(second):
+#             second = z3.BitVecVal(second, int(op[1:3]))
 #         computed = first * second % int(op[1:3])
 
-#         stack[top-2] = simplify(computed) if is_expr(computed) else computed
+#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
 #         top -= 1
 
 #     elif op in ['i32.div_u', 'i64.div_u']:
 #         first = stack[top-1]
 #         second = stack[top-2]
-#         if is_all_real(first, second):
+#         if utils.is_all_real(first, second):
 #             if second == 0:
 #                 computed = 0
 #                 # TODO: Error Processing!
 #             else:
 #                 computed = first / second
 #         else:
-#             first = BitVecVal(first, int(op[1:3])) if is_real(first) else first
-#             second = BitVecVal(second, int(op[1:3])) if is_real(second) else second
+#             first = z3.BitVecVal(first, int(op[1:3])) if is_real(first) else first
+#             second = z3.BitVecVal(second, int(op[1:3])) if is_real(second) else second
 #             solver.push()
-#             solver.add(Not(second==0))
-#             if check_sat(solver) == unsat:
+#             solver.add(z3.Not(second==0))
+#             if utils.check_sat(solver) == z3.unsat:
 #                 computed = 0
 #             else:
 #                 computed = UDIV(first, second)
 #             solver.pop()
-#         stack[top-2] = simplify(computed) if is_expr(computed) else computed
+#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
     
 #     elif op in ['i32.div_s', 'i64.div_s']:
 #         first = stack[top-1]
 #         second = stack[top-2]
-#         if is_all_real(first, second):
+#         if utils.is_all_real(first, second):
 #             if second == 0:
 #                 computed = 0
 #             elif first == -2**(int(op[1:3])-1) and second == -1:
@@ -494,22 +494,22 @@
 #                 sign = -1 if (fitst / second) < 0 else 1
 #                 computed = sign * (abs(first) / abs(second))
 #         else:
-#             first = BitVecVal(first, int(op[1:3])) if is_real(first) else first
-#             second = BitVecVal(second, int(op[1:3])) if is_real(second) else second
+#             first = z3.BitVecVal(first, int(op[1:3])) if is_real(first) else first
+#             second = z3.BitVecVal(second, int(op[1:3])) if is_real(second) else second
 #             solver.push()
-#             solver.add(Not(second==0))
-#             if check_sat(solver) == unsat:
+#             solver.add(z3.Not(second==0))
+#             if utils.check_sat(solver) == z3.unsat:
 #                 computed = 0
 #             else:
 #                 solver.push()
-#                 solver.add(Not(And(first == -2*(int(op[1:3])-1), second == -1)))
-#                 if check_sat(solver) == unsat:
+#                 solver.add(z3.Not(And(first == -2*(int(op[1:3])-1), second == -1)))
+#                 if utils.check_sat(solver) == z3.unsat:
 #                     computed = -2**(int(op[1:3])-1)
 #                 else:
 #                     solver.push()
 #                     solver.add(first / second < 0)
-#                     sign = -1 if check_sat(solver) == sat else 1
-#                     z3_abs = lambda x: If(x >= 0, x, -x)
+#                     sign = -1 if utils.check_sat(solver) == z3.sat else 1
+#                     z3_abs = lambda x: z3.If(x >= 0, x, -x)
 #                     first = z3_abs(first)
 #                     second = z3_abs(second)
 #                     computed = sign * (first / second)
@@ -517,13 +517,13 @@
 #                 solver.pop()
 #             solver.pop()
 
-#         stack[top-2] = simplify(computed) if is_expr(computed) else computed
+#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
 #         top -= 1
 
 #     elif op in ['i32.rem_s', 'i64.rem_s']:
 #         first = stack[top-1]
 #         second = stack[top-2]
-#         if is_all_real(first, second):
+#         if utils.is_all_real(first, second):
 #             if second == 0:
 #                 computed = 0
 #             else:
@@ -531,36 +531,36 @@
 #                 computed = sign * (abs(first) % abs(second))
 
 #         else:
-#             first = BitVecVal(first, int(op[1:3])) if is_real(first) else first
-#             second = BitVecVal(second, int(op[1:3])) if is_real(second) else second
+#             first = z3.BitVecVal(first, int(op[1:3])) if is_real(first) else first
+#             second = z3.BitVecVal(second, int(op[1:3])) if is_real(second) else second
             
 #             solver.push()
-#             solver.add(Not(second == 0))
-#             if check_sat == unsat:
+#             solver.add(z3.Not(second == 0))
+#             if utils.check_sat == z3.unsat:
 #                 computed = 0
 #             else:
 #                 first = to_signed(first, int(op[1:3]))
 #                 second = to_signed(second, int(op[1:3]))
 #                 solver.push()
 #                 solver.add(first < 0)
-#                 sign = BitVecVal(-1, int(op[1:3])) if check_sat(solver) == sat else BitVecVal(1, int(op[1:3]))
+#                 sign = z3.BitVecVal(-1, int(op[1:3])) if utils.check_sat(solver) == z3.sat else z3.BitVecVal(1, int(op[1:3]))
 #                 solver.pop()
 
-#                 z3_abs = lambda x: If(x >= 0, x, -x)
+#                 z3_abs = lambda x: z3.If(x >= 0, x, -x)
 #                 first = z3_abs(first)
 #                 second = z3_abs(second)
 
 #                 computed = sign * (first % second)
 #             solver.pop()
 
-#         stack[top-2] = simplify(computed) if is_expr(computed) else computed
+#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
 #         top -= 1
 
 #     elif op in ['i32.rem_u', 'i64.rem_u']:
 #         first = stack[top-1]
 #         second = stack[top-2]
         
-#         if is_all_real(first, second):
+#         if utils.is_all_real(first, second):
 #             if second == 0:
 #                 computed = 0
 #             else:
@@ -568,40 +568,40 @@
 #                 second = to_unsigned(second, int(op[1:3]))
 #                 computed = first % second
 #         else:
-#             first = to_symbolic(first)
-#             second = to_symbolic(second)
+#             first = utils.to_symbolic(first)
+#             second = utils.to_symbolic(second)
             
 #             solver.push()
-#             solver.add(Not(second==0))
-#             if check_sat(solver) == unsat:
+#             solver.add(z3.Not(second==0))
+#             if utils.check_sat(solver) == z3.unsat:
 #                 computed = 0
 #             else:
 #                 computed = URem(first, second)
 #             solver.pop()
 
 
-#         stack[top-2] = simplify(computed) if is_expr(computed) else computed
+#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
 #         top -= 1
 
 #     elif op in ['i32.and', 'i64.and']:
 #         first = stack[top-1]
 #         second = stack[top-2]
 #         computed = first & second
-#         stack[top-2] = simplify(computed) if is_expr(computed) else computed
+#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
 #         top -= 1
 
 #     elif op in ['i32.or', 'i64.or']:
 #         first = stack[top-1]
 #         second = stack[top-2]
 #         computed = first | second
-#         stack[top-2] = simplify(computed) if is_expr(computed) else computed
+#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
 #         top-= 1
 
 #     elif op in ['i32.xor', 'i64.xor']:
 #         first = stack[top-1]
 #         second = stack[top-2]
 #         computed = first ^ second
-#         stack[top-2] = simplify(computed) if is_expr(computed) else computed
+#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
 #         top -= 1
 
 #     elif op in ['i32.shl', 'i64.shl']: # waiting to fix-up
@@ -609,23 +609,23 @@
 #         second = stack[top-2]
 #         modulo = int(op[1:3])
 
-#         if is_all_real(first, second):
+#         if utils.is_all_real(first, second):
 #             if first >= modulo or first < 0:
 #                 computed = 0
 #             else:
 #                 computed = second << (first % modulo)
 #         else:
-#             first = to_symbolic(first, modulo)
-#             second = to_symbolic(second, modulo)
+#             first = utils.to_symbolic(first, modulo)
+#             second = utils.to_symbolic(second, modulo)
 #             solver.push()
-#             solver.add(Not(Or(first >= modulo, first < 0)))
-#             if check_sat(solver) == unsat:
+#             solver.add(z3.Not(Or(first >= modulo, first < 0)))
+#             if utils.check_sat(solver) == z3.unsat:
 #                 computed = 0
 #             else:
 #                 computed = second << (first % modulo)
 #             solver.pop()
         
-#         stack[top-2] = simplify(computed) if is_expr(computed) else computed
+#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
 #         top -= 1
 
 #     elif op in ['i32.shr_s', 'i64.shr_s']:
@@ -633,23 +633,23 @@
 #         second = stack[top-2]
 #         modulo = int(op[1:3])
         
-#         if is_all_real(first, second):
+#         if utils.is_all_real(first, second):
 #             if first < 0:
 #                 computed = 0
 #             else:
 #                 computed = second >> (first % modulo)
 #         else:
-#             first = to_symbolic(first, modulo)
-#             second = to_symbolic(second, modulo)
+#             first = utils.to_symbolic(first, modulo)
+#             second = utils.to_symbolic(second, modulo)
 #             solver.push()
-#             solver.add(Not(first < 0))
-#             if check_sat(solver) == unsat:
+#             solver.add(z3.Not(first < 0))
+#             if utils.check_sat(solver) == z3.unsat:
 #                 computed = 0
 #             else:
 #                 computed = second >> (first % modulo)
 #             solver.pop()
         
-#         stack[top-2] = simplify(computed) if is_expr(computed) else computed
+#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
 #         top -= 1
 
 #     elif op in ['i32.shr_u', 'i64.shr_u']: # TODO: fix-up
@@ -658,7 +658,7 @@
 #         modulo = int(op[1:3])
 #         bit_len = int('F' * (modulo // 4), base=16)
 
-#         if is_all_real(first, second):
+#         if utils.is_all_real(first, second):
 #             if first < 0 or first > modulo:
 #                 computed = 0
 #             elif first == 0:
@@ -666,17 +666,17 @@
 #             else:
 #                 computed = (second & bit_len) >> (first % modulo)
 #         else:
-#             first = to_symbolic(first, modulo)
-#             second = to_symbolic(second, modulo)
+#             first = utils.to_symbolic(first, modulo)
+#             second = utils.to_symbolic(second, modulo)
 #             solver.push()
-#             solver.add(Not(first < 0))
-#             if check_sat(solver) == unsat:
+#             solver.add(z3.Not(first < 0))
+#             if utils.check_sat(solver) == z3.unsat:
 #                 computed = 0
 #             else:
 #                 computed = UShR(second, (first % modulo)) 
 #             solver.pop()
 
-#         stack[top-2] = simplify(computed) if is_expr(computed) else computed
+#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
 #         top -= 1
 
 #     elif op in ['i32.rotl', 'i64.rotl']: # TODO: fix-up
@@ -685,18 +685,18 @@
 #         modulo = int(op[1:3])
 #         bit_len = int('F' * (modulo // 4), base=16)
 
-#         if is_all_real(first, second):
+#         if utils.is_all_real(first, second):
 #             move_len = first % modulo
 #             second &= bit_len
 #             computed = (second >> (modulo - move_len)) | (second << move_len)
 #         else:
-#             first = to_symbolic(first, modulo)
-#             second = to_symbolic(second, modulo)
+#             first = utils.to_symbolic(first, modulo)
+#             second = utils.to_symbolic(second, modulo)
 #             move_len = first % modulo
 #             second &= bit_len
 #             computed = (second >> (modulo - move_len)) | (second << move_len)
         
-#         stack[top-2] = simplify(computed) if is_expr(computed) else computed
+#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
 #         top -= 1
 
 #     elif op in ['i32.rotr', 'i64.rotr']: # TODO: fix-up
@@ -705,18 +705,18 @@
 #         modulo = int(op[1:3])
 #         bit_len = int('F' * (modulo // 4), base=16)
 
-#         if is_all_real(first, second):
+#         if utils.is_all_real(first, second):
 #             move_len = first % modulo
 #             second &= bit_len
 #             computed = (second << (modulo - move_len)) | (second >> move_len)
 #         else:
-#             first = to_symbolic(first, modulo)
-#             second = to_symbolic(second, modulo)
+#             first = utils.to_symbolic(first, modulo)
+#             second = utils.to_symbolic(second, modulo)
 #             move_len = first % modulo
 #             second &= bit_len
 #             computed = (second << (modulo - move_len)) | (second >> move_len)
         
-#         stack[top-2] = simplify(computed) if is_expr(computed) else computed
+#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
 #         top -= 1
 
 #     # TODO: float number
@@ -726,10 +726,10 @@
 #         if is_real(first):
 #             computed = abs(first)
 #         else:
-#             z3_abs = lambda x: If(x >= 0, x, -x)
+#             z3_abs = lambda x: z3.If(x >= 0, x, -x)
 #             computed = z3_abs(first)
         
-#         computed = simplify(computed) if is_expr(computed) else computed
+#         computed = z3.simplify(computed) if z3.is_expr(computed) else computed
 
 #     elif op in ['f32.neg', 'f64.neg']:
 #         stack[top-1] = -stack[top-1]
@@ -787,15 +787,15 @@
 #         else:
 #             solver.push()
 #             solver.add(first < 0)
-#             sign = BitVecVal(-1, 32) if check_sat(solver) == sat \
-#                 else BitVecVal(1, 32)
+#             sign = z3.BitVecVal(-1, 32) if utils.check_sat(solver) == z3.sat \
+#                 else z3.BitVecVal(1, 32)
 #             solver.pop()
 
-#             z3_abs = lambda x: If(x >= 0, x, -x)
+#             z3_abs = lambda x: z3.If(x >= 0, x, -x)
 #             first = z3_abs(first)
 #             computed = sign * (first % 2**32)
         
-#         stack[top-1] = simplify(computed) if is_expr(computed) else computed
+#         stack[top-1] = z3.simplify(computed) if z3.is_expr(computed) else computed
 
 #     # TODO: Float-related instructon.
 #     elif op in ['i32.trunc_s/f32', 'i32.trunc_u/f32', 'i32.trunc_s/f64', 'i32.trunc_u/f64']:
@@ -808,7 +808,7 @@
 #         else:
 #             computed = SignExt(32, first)
         
-#         stack[top-1] = simplify(computed) if is_expr(computed) else computed
+#         stack[top-1] = z3.simplify(computed) if z3.is_expr(computed) else computed
     
 #     elif op in ['i64.extend_i32_u']:
 #         first = stack[top-1]
@@ -817,7 +817,7 @@
 #         else:
 #             computed = ZeroExt(32, first)
         
-#         stack[top-1] = simplify(computed) if is_expr(computed) else computed
+#         stack[top-1] = z3.simplify(computed) if z3.is_expr(computed) else computed
 
 #     elif op in ['i64.trunc_s/f32', 'i64.trunc_u/f32', 'i64.trunc_s/f64', 'i64.trunc_u/f64']:  # TODO : Implement the function
 #         stack[top-1] = int(stack[top-1])
@@ -857,6 +857,8 @@
 import math
 import typing
 import z3
+import copy
+import utils
 
 """ from wana import convention
 from wana import log
@@ -957,12 +959,14 @@ class MemoryInstance:
     def __init__(self, limits: runtime_structure.Limits):
         self.limits = limits
         self.size = limits.minimum
-        self.data = bytearray([0x00 for _ in range(limits.minimum * 64 * 1024)])
+        # self.data = bytearray([0x00 for _ in range(limits.minimum * 64 * 1024)])
+        self.data = [0] * limits.minimum * 64 * 1024
 
     def grow(self, n: int):
         if self.limits.maximum and self.size + n > self.limits.maximum:
             raise Exception('Out of memory limit!')
-        self.data.extend([0 for _ in range(n * 64 * 1024)])
+        # self.data.extend([0 for _ in range(n * 64 * 1024)])
+        self.data.extend([0] * n * 64 * 1024)
         self.size += n
 
 class GlobalInstance:
@@ -1159,7 +1163,7 @@ class ModuleInstance:
         externvals: typing.List[ExternValue] = None
     ):
         self.types = module.types
-        # TODO: If module is not valid, the panic
+        # TODO: z3.If module is not valid, the panic
         for e in module.imports:
             assert e.kind in convention.extern_type
 
@@ -1222,7 +1226,7 @@ class ModuleInstance:
         # Assert: due to validation, the frame F is now on the top of the stack.
         assert isinstance(stack.pop(), Frame)
         assert stack.len() == 0
-        # If the start function module.start is not empty, invoke the function instance.
+        # z3.If the start function module.start is not empty, invoke the function instance.
         if module.start is not None:
             log.debugln(f'Running start function {module.start}:')
             call(self, module.start, store, stack)
@@ -1309,6 +1313,7 @@ def wasmfunc_call(
     # An expression is evaluated relative to a current frame pointing to its containing module instance.
     r = exec_expr(store, frame, stack, f.code.expr, -1)
     # Exit
+    print('Last stack: ', stack)
     if not isinstance(stack.pop(), Frame):
         raise Exception('Signature mismatch in call!')
     return r
@@ -1347,6 +1352,9 @@ def spec_br(l: int, stack: Stack) -> int:
     stack.ext(v)
     return L.continuation - 1
 
+#[TODO] solver change.
+solver = z3.Solver()
+
 def exec_expr(
     store: Store,
     frame: Frame,
@@ -1367,6 +1375,7 @@ def exec_expr(
     if not expr.data:
         raise Exception('Empty init expr!')
     while True:
+
         pc += 1
         if pc >= len(expr.data):
             break
@@ -1382,6 +1391,9 @@ def exec_expr(
                 log.verboseln(f'{" "*18} {str(n)+":":<8} [{", ".join(e)}]')
 
         opcode = i.code
+        print('Stack: ', stack)
+        print('Branch result: ', branch_res)
+        print('Execute: ', hex(opcode))
         if opcode >= convention.unreachable and opcode <= convention.call_indirect:
             if opcode == convention.unreachable:
                 raise Exception('Unreachable opcode!')
@@ -1398,7 +1410,7 @@ def exec_expr(
                 c = stack.pop().n
                 arity = 0 if i.immediate_arguments == convention.empty else 1
                 stack.add(Label(arity, expr.composition[pc][-1] + 1))
-                if is_all_real(c):
+                if utils.is_all_real(c):
                     if c != 0:
                         continue
                     if len(expr.composition[pc]) > 2:
@@ -1412,14 +1424,14 @@ def exec_expr(
                     solver.add(c)
                     log.debugln('Branch: left')
                     try:
-                        if solver.check() == unsat:
+                        if solver.check() == z3.unsat:
                             log.debugln('Infeasible path detected!')
                         else:
                             # Execute the left branch
-                            new_store = store.copy()
-                            new_frame = frame.copy()
-                            new_stack = stack.copy()
-                            new_expr = expr.copy()
+                            new_store = copy.deepcopy(store)
+                            new_frame = copy.deepcopy(frame)
+                            new_stack = copy.deepcopy(stack)
+                            new_expr = copy.deepcopy(expr)
                             new_pc = pc
                             branch_res += exec_expr(new_store, new_frame, new_stack, new_expr, new_pc)
                     except TimeoutError:
@@ -1429,17 +1441,17 @@ def exec_expr(
                     
                     solver.pop()
                     solver.push()
-                    solver.add(Not(c))
+                    solver.add(z3.Not(c))
                     log.debugln('Branch: right')
                     try:
-                        if solver.check() == unsat:
+                        if solver.check() == z3.unsat:
                             log.debugln('Infeasible path detected!')
                         else:
                             # Execute the right branch
-                            new_store = store.copy()
-                            new_frame = frame.copy()
-                            new_stack = stack.copy()
-                            new_expr = expr.copy()
+                            new_store = copy.deepcopy(store)
+                            new_frame = copy.deepcopy(frame)
+                            new_stack = copy.deepcopy(stack)
+                            new_expr = copy.deepcopy(expr)
                             new_pc = expr.composition[pc][1]
                             branch_res += exec_expr(new_store, new_frame, new_stack, new_expr, new_pc)
                     except TimeoutError:
@@ -1472,11 +1484,11 @@ def exec_expr(
                 stack.ext(v)
                 continue
             if opcode == convention.br:
-                pc = spec_br(i.immeiate_arguments, stack)
+                pc = spec_br(i.immediate_arguments, stack)
                 continue
             if opcode == convention.br_if:
                 c = stack.pop().n
-                if is_all_real(c):
+                if utils.is_all_real(c):
                     if c == 0:
                         continue
                     pc = spec_br(i.immediate_arguments, stack)
@@ -1487,14 +1499,14 @@ def exec_expr(
                     solver.add(c)
                     log.debugln('Branch: left')
                     try:
-                        if solver.check() == unsat:
+                        if solver.check() == z3.unsat:
                             log.debugln('Infeasible path detected!')
                         else:
                             # Execute the left branch
-                            new_store = store.copy()
-                            new_frame = frame.copy()
-                            new_stack = stack.copy()
-                            new_expr = expr.copy()
+                            new_store = copy.deepcopy(store)
+                            new_frame = copy.deepcopy(frame)
+                            new_stack = copy.deepcopy(stack)
+                            new_expr = copy.deepcopy(expr)
                             new_pc = pc
                             branch_res += exec_expr(new_store, new_frame, new_stack, new_expr, new_pc)
                     except TimeoutError:
@@ -1504,17 +1516,17 @@ def exec_expr(
                     
                     solver.pop()
                     solver.push()
-                    solver.add(Not(c))
+                    solver.add(z3.Not(c))
                     log.debugln('Branch: right')
                     try:
-                        if solver.check() == unsat:
+                        if solver.check() == z3.unsat:
                             log.debugln('Infeasible path detected!')
                         else:
                             # Execute the right branch
-                            new_store = store.copy()
-                            new_frame = frame.copy()
-                            new_stack = stack.copy()
-                            new_expr = expr.copy()
+                            new_store = copy.deepcopy(store)
+                            new_frame = copy.deepcopy(frame)
+                            new_stack = copy.deepcopy(stack)
+                            new_expr = copy.deepcopy(expr)
                             new_pc = expr.composition[pc][1]
                             branch_res += exec_expr(new_store, new_frame, new_stack, new_expr, new_pc)
                     except TimeoutError:
@@ -1523,6 +1535,8 @@ def exec_expr(
                         raise
 
                     return branch_res
+
+            # [TODO] Ready to implement symbolic execution.
             if opcode == convention.br_table:
                 a = i.immediate_arguments[0]
                 l = i.immediate_arguments[1]
@@ -1531,6 +1545,8 @@ def exec_expr(
                     l = a[c]
                 pc = spec_br(l, stack)
                 continue
+
+            # [TODO] Ready to implement.
             if opcode == convention.return_:
                 v = [stack.pop() for _ in range(frame.arity)][::-1]
                 while True:
@@ -1555,6 +1571,8 @@ def exec_expr(
                 stack.ext(r)
                 continue
             continue
+
+
         if opcode == convention.drop:
             stack.pop()
             continue
@@ -1562,10 +1580,16 @@ def exec_expr(
             cond = stack.pop().n
             a = stack.pop()
             b = stack.pop()
-            if cond:
-                stack.add(b)
+            if utils.is_all_real(cond):    
+                if cond:
+                    stack.add(b)
+                else:
+                    stack.add(a)
             else:
-                stack.add(a)
+                a.n = utils.to_symbolic(a.n, 32) if a.valtype == convention.i32 or a.valtype == convention.f32 else utils.to_symbolic(a.n, 64)
+                b.n = utils.to_symbolic(b.n, 32) if a.valtype == convention.i32 or a.valtype == convention.f32 else utils.to_symbolic(b.n, 64)
+                computed = Value(a.valtype, z3.simplify(z3.If(cond == 0, a.n, b.n)))
+                stack.add(computed)
             continue
         if opcode == convention.get_local:
             stack.add(frame.locals[i.immediate_arguments])
@@ -1578,7 +1602,7 @@ def exec_expr(
             frame.locals[i.immediate_arguments] = stack.pop()
             continue
         if opcode == convention.tee_local:
-            frame.locals[i.immediate_arguments] = stack.pop()
+            frame.locals[i.immediate_arguments] = stack.top()
             continue
         if opcode == convention.get_global:
             stack.add(store.globals[module.globaladdrs[i.immediate_arguments]].value)
@@ -1587,54 +1611,56 @@ def exec_expr(
             store.globals[module.globaladdrs[i.immediate_arguments]] = GlobalInstance(stack.pop(), True)
             continue
         
-        # [TODO] Using some approaches to implement byte-store.
         if opcode >= convention.i32_load and opcode <= convention.grow_memory:
             m = store.mems[module.memaddrs[0]]
             if opcode >= convention.i32_load and opcode <= convention.i64_load32_u:
-                a = stack.pop() + i.immediate_arguments[1]
+                a = stack.pop().n + i.immediate_arguments[1]
                 if a + convention.opcodes[opcode][2] > len(m.data):
                     raise Exception('Out of bounds memory access!')
                 if opcode == convention.i32_load:
-                    stack.add(Value.from_i32(num.LittleEndian.i32(m.data[a:a+4])))
+                    stack.add(Value.from_i32(num.MemoryLoad.i32(m.data[a:a+4])))
                     continue
                 if opcode == convention.i64_load:
-                    stack.add(Value.from_i64(num.LittleEndian.i64(m.data[a:a+8])))
+                    stack.add(Value.from_i64(num.MemoryLoad.i64(m.data[a:a+8])))
                     continue
+
+                # [TODO] Using some approaches to implement float byte-store.
                 if opcode == convention.f32_load:
                     stack.add(Value.from_f64(num.LittleEndian.f64(m.data[a:a+4])))
                     continue
                 if opcode == convention.f64_load:
                     stack.add(Value.from_f64(num.LittleEndian.f64(m.data[a:a+8])))
                     continue
+
                 if opcode == convention.i32_load8_s:
-                    stack.add(Value.from_i32(num.LittleEndian.i8(m.data[a:a+1])))
+                    stack.add(Value.from_i32(num.MemoryLoad.i8(m.data[a:a+1])))
                     continue
                 if opcode == convention.i32_load8_u:
-                    stack.add(Value.from_i32(num.LittleEndian.u8(m.data[a:a+1])))
+                    stack.add(Value.from_i32(num.MemoryLoad.u8(m.data[a:a+1])))
                     continue
                 if opcode == convention.i32_load16_s:
-                    stack.add(Value.from_i32(num.LittleEndian.u16(m.data[a:a+2])))
+                    stack.add(Value.from_i32(num.MemoryLoad.i16(m.data[a:a+2])))
                     continue
                 if opcode == convention.i32_load16_u:
-                    stack.add(Value.from_i32(num.LittleEndian.i16(m.data[a:a+2])))
+                    stack.add(Value.from_i32(num.MemoryLoad.u16(m.data[a:a+2])))
                     continue
                 if opcode == convention.i64_load8_s:
-                    stack.add(Value.from_i64(num.LittleEndian.i8(m.data[a:a+1])))
+                    stack.add(Value.from_i64(num.MemoryLoad.i8(m.data[a:a+1])))
                     continue
                 if opcode == convention.i64_load8_u:
-                    stack.add(Value.from_i64(num.LittleEndian.u8(m.data[a:a+1])))
+                    stack.add(Value.from_i64(num.MemoryLoad.u8(m.data[a:a+1])))
                     continue
                 if opcode == convention.i64_load16_s:
-                    stack.add(Value.from_i64(num.LittleEndian.i16(m.data[a:a+2])))
+                    stack.add(Value.from_i64(num.MemoryLoad.i16(m.data[a:a+2])))
                     continue
                 if opcode == convention.i64_load16_u:
-                    stack.add(Value.from_i64(num.LittleEndian.i32(m.data[a:a+2])))
+                    stack.add(Value.from_i64(num.MemoryLoad.u16(m.data[a:a+2])))
                     continue
                 if opcode == convention.i64_load32_s:
-                    stack.add(Value.from_i64(num.LittleEndian.i32(m.data[a:a+4])))
+                    stack.add(Value.from_i64(num.MemoryLoad.i32(m.data[a:a+4])))
                     continue
                 if opcode == convention.i64_load32_u:
-                    stack.add(Value.from_i64(num.LittleEndian.i32(m.data[a:a+4])))
+                    stack.add(Value.from_i64(num.MemoryLoad.u32(m.data[a:a+4])))
                     continue
                 continue
             if opcode >= convention.i32_store and opcode <= convention.i64_store32:
@@ -1643,43 +1669,49 @@ def exec_expr(
                 if a + convention.opcodes[2] > len(m.data):
                     raise Exception('Out of bounds memory access!')
                 if opcode == convention.i32_store:
-                    m.data[a:a+4] = num.LittleEndian.pack_i32(v)
+                    m.data[a:a+4] = num.MemoryStore.pack_i32(v)
                     continue
                 if opcode == convention.i64_store:
-                    m.data[a:a+8] = num.LittleEndian.pack_i64(v)
+                    m.data[a:a+8] = num.MemoryStore.pack_i64(v)
                     continue
+
+                # [TODO] float number problem.
                 if opcode == convention.f32_store:
                     m.data[a:a+4] = num.LittleEndian.pack_f32(v)
                     continue
                 if opcode == convention.f64_store:
                     m.data[a:a+8] = num.LittleEndian.pack_f64(v)
                     continue
+
                 if opcode == convention.i32_store8:
-                    m.data[a:a+1] = num.LittleEndian.pack_i8(num.int2i8(v))
+                    m.data[a:a+1] = num.MemoryStore.pack_i8(v)
                     continue
                 if opcode == convention.i32_store16:
-                    m.data[a:a+2] = num.LittleEndian.pack_i16(num.int2i16(v))
+                    m.data[a:a+2] = num.MemoryStore.pack_i16(v)
                     continue
                 if opcode == convention.i64_store8:
-                    m.data[a:a+1] = num.LittleEndian.pack_i8(num.int2i8(v))
+                    m.data[a:a+1] = num.MemoryStore.pack_i8(v)
                     continue
                 if opcode == convention.i64_store16:
-                    m.data[a:a+2] = num.LittleEndian.pack_i16(num.int2i16(v))
+                    m.data[a:a+2] = num.MemoryStore.pack_i16(v)
                     continue
                 if opcode == convention.i64_store32:
-                    m.data[a:a+4] = num.LittleEndian.pack_i32(num.int2i32(v))
+                    m.data[a:a+4] = num.MemoryStore.pack_i32(v)
                     continue
                 continue
             if opcode == convention.current_memory:
                 stack.add(Value.from_i32(m.size))
                 continue
+            
+            # [TODO] z3.If the grow size is a symbol, it could be difficult to execute.
             if opcode == convention.grow_memory:
                 cursize = m.size
                 m.grow(stack.pop().n)
                 stack.add(Value.from_i32(cursize))
                 continue
             continue
-        if opcode >= convention.i32_count and opcode <= convention.f64_const:
+
+        if opcode >= convention.i32_const and opcode <= convention.f64_const:
             if opcode == convention.i32_const:
                 stack.add(Value.from_i32(i.immediate_arguments))
                 continue
@@ -1695,165 +1727,165 @@ def exec_expr(
             continue
         if opcode == convention.i32_eqz:
             a = stack.pop().n
-            if is_all_real(a):
+            if utils.is_all_real(a):
                 computed = int(a == 0)
             else:
-                computed = If(a == 0, BitVecVal(1, 32), BitVecVal(0, 32))
+                computed = z3.If(a == 0, z3.BitVecVal(1, 32), z3.BitVecVal(0, 32))
             stack.add(Value.from_i32(computed))
             continue
         if opcode >= convention.i32_eq and opcode <= convention.i32_geu:
             b = stack.pop().n
             a = stack.pop().n
             if opcode == convention.i32_eq:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = int(a == b)
                 else:
-                    computed = simplify(If(a == b, BitVecVal(1, 32), BitVecVal(0, 32)))
+                    computed = z3.simplify(z3.If(a == b, z3.BitVecVal(1, 32), z3.BitVecVal(0, 32)))
                 stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_ne:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = int(a != b)
                 else:
-                    computed = simplify(If(a != b, BitVecVal(1, 32), BitVecVal(0, 32)))
+                    computed = z3.simplify(z3.If(a != b, z3.BitVecVal(1, 32), z3.BitVecVal(0, 32)))
                 stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_lts:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = int(a < b)
                 else:
-                    computed = simplify(If(a < b, BitVecVal(1, 32), BitVecVal(0, 32)))
+                    computed = z3.simplify(z3.If(a < b, z3.BitVecVal(1, 32), z3.BitVecVal(0, 32)))
                 stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_ltu:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = int(num.int2u32(a) < num.int2u32(b))
                 else:
-                    computed = simplify(If(ULT(a, b), BitVecVal(1, 32), BitVecVal(0, 32)))
+                    computed = z3.simplify(z3.If(ULT(a, b), z3.BitVecVal(1, 32), z3.BitVecVal(0, 32)))
                 stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_gts:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = int(a > b)
                 else:
-                    computed = simplify(If(a > b, BitVecVal(1, 32), BitVecVal(0, 32)))
+                    computed = z3.simplify(z3.If(a > b, z3.BitVecVal(1, 32), z3.BitVecVal(0, 32)))
                 stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_gtu:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = int(num.int2u32(a) > num.int2u32(b))
                 else:
-                    computed = simplify(If(UGT(a, b), BitVecVal(1, 32), BitVecVal(0, 32)))
+                    computed = z3.simplify(z3.If(z3.UGT(a, b), z3.BitVecVal(1, 32), z3.BitVecVal(0, 32)))
                 stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_les:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = int(a <= b)
                 else:
-                    computed = simplify(If(a <= b, BitVecVal(1, 32), BitVecVal(0, 32)))
+                    computed = z3.simplify(z3.If(a <= b, z3.BitVecVal(1, 32), z3.BitVecVal(0, 32)))
                 stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_leu:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = int(num.int2u32(a) <= num.int2u32(b))
                 else:
-                    computed = simplify(If(ULE(a, b), BitVecVal(1, 32), BitVecVal(0, 32)))
+                    computed = z3.simplify(z3.If(z3.ULE(a, b), z3.BitVecVal(1, 32), z3.BitVecVal(0, 32)))
                 stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_ges:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = int(a >= b)
                 else:
-                    computed = simpify(If(a >= b, BitVecVal(1, 32), BitVecVal(0, 32)))
+                    computed = z3.simplify(z3.If(a >= b, z3.BitVecVal(1, 32), z3.BitVecVal(0, 32)))
                 stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_geu:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = int(num.int2u32(a) >= num.int2u32(b))
                 else:
-                    computed = simplify(If(UGE(a, b), BitVecVal(1, 32), BitVecVal(0, 32)))
+                    computed = z3.simplify(z3.If(z3.UGE(a, b), z3.BitVecVal(1, 32), z3.BitVecVal(0, 32)))
                 stack.add(Value.from_i32(computed))
                 continue
             continue
         if opcode == convention.i64_eqz:
             a = stack.pop().n
-            if is_all_real(a):
+            if utils.is_all_real(a):
                 computed = int(a == 0)
             else:
-                computed = simplify(If(a == 0, BitVecVal(1, 32), BitVecVal(0, 32)))
+                computed = z3.simplify(z3.If(a == 0, z3.BitVecVal(1, 32), z3.BitVecVal(0, 32)))
             stack.add(Value.from_i32(computed))
             continue
         if opcode >= convention.i64_eq and opcode <= convention.i64_geu:
             b = stack.pop().n
             a = stack.pop().n
             if opcode == convention.i64_eq:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = int(a == b)
                 else:
-                    computed = simplify(If(a == b, BitVecVal(1, 32), BitVecVal(0, 32)))
+                    computed = z3.simplify(z3.If(a == b, z3.BitVecVal(1, 32), z3.BitVecVal(0, 32)))
                 stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i64_ne:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = int(a != b)
                 else:
-                    computed = simplify(If(a != b, BitVecVal(1, 32), BitVecVal(0, 32)))
+                    computed = z3.simplify(z3.If(a != b, z3.BitVecVal(1, 32), z3.BitVecVal(0, 32)))
                 stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i64_lts:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = int(a < b)
                 else:
-                    computed = simplify(If(a < b, BitVecVal(1, 32), BitVecVal(0, 32)))
+                    computed = z3.simplify(z3.If(a < b, z3.BitVecVal(1, 32), z3.BitVecVal(0, 32)))
                 stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i64_ltu:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = int(num.int2u64(a) < num.int2u64(b))
                 else:
-                    computed = simplify(If(ULT(a, b), BitVecVal(1, 32), BitVecVal(0, 32)))
+                    computed = z3.simplify(z3.If(ULT(a, b), z3.BitVecVal(1, 32), z3.BitVecVal(0, 32)))
                 stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i64_gts:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = int(a > b)
                 else:
-                    computed = simplify(If(a > b, BitVecVal(1, 32), BitVecVal(0, 32)))
+                    computed = z3.simplify(z3.If(a > b, z3.BitVecVal(1, 32), z3.BitVecVal(0, 32)))
                 stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i64_gtu:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = int(num.int2u64(a) > num.int2u64(b))
                 else:
-                    computed = simplify(If(UGT(a, b), BitVecVal(1, 32), BitVecVal(0, 32)))
+                    computed = z3.simplify(z3.If(z3.UGT(a, b), z3.BitVecVal(1, 32), z3.BitVecVal(0, 32)))
                 stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i64_les:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = int(a <= b)
                 else:
-                    computed = simplify(If(a <= b, BitVecVal(1, 32), BitVecVal(0, 32)))
+                    computed = z3.simplify(z3.If(a <= b, z3.BitVecVal(1, 32), z3.BitVecVal(0, 32)))
                 stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i64_leu:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = int(num.int2u64(a) <= num.int2u64(b))
                 else:
-                    computed = simplify(If(ULE(a, b), BitVecVal(1, 32), BitVecVal(0, 32)))
+                    computed = z3.simplify(z3.If(z3.ULE(a, b), z3.BitVecVal(1, 32), z3.BitVecVal(0, 32)))
                 stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i64_ges:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = int(a >= b)
                 else:
-                    computed = simplify(If(a >= b, BitVecVal(1, 32), BitVecVal(0, 32)))
+                    computed = z3.simplify(z3.If(a >= b, z3.BitVecVal(1, 32), z3.BitVecVal(0, 32)))
                 stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i64_geu:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = int(num.int2u64(a) >= num.int2u64(b))
                 else:
-                    computed = simplify(If(UGE(a, b), BitVecVal(1, 32), BitVecVal(0, 32)))
+                    computed = z3.simplify(z3.If(z3.UGE(a, b), z3.BitVecVal(1, 32), z3.BitVecVal(0, 32)))
                 stack.add(Value.from_i32(computed))
                 continue
             continue
@@ -1904,25 +1936,34 @@ def exec_expr(
         if opcode >= convention.i32_clz and opcode <= convention.i32_popcnt:
             a = stack.pop().n
             if opcode == convention.i32_clz:
-                c = 0
-                while c < 32 and (a & 0x80000000) == 0:
-                    c += 1
-                    a *= 2
+                if utils.is_all_real(a):
+                    c = 0
+                    while c < 32 and (a & 0x80000000) == 0:
+                        c += 1
+                        a *= 2
+                else:
+                    c = 0
                 stack.add(Value.from_i32(c))
                 continue
             if opcode == convention.i32_ctz:
-                c = 0
-                while c < 32 and (a % 2) == 0:
-                    c += 1
-                    a /= 2
+                if utils.is_all_real(a):
+                    c = 0
+                    while c < 32 and (a % 2) == 0:
+                        c += 1
+                        a /= 2
+                else:
+                    c = 0
                 stack.add(Value.from_i32(c))
                 continue
             if opcode == convention.i32_popcnt:
-                c = 0
-                for i in range(32):
-                    if 0x1 & a:
-                        c += 1
-                    a /= 2
+                if utils.is_all_real(a):
+                    c = 0
+                    for i in range(32):
+                        if 0x1 & a:
+                            c += 1
+                        a /= 2
+                else:
+                    c = 0
                 stack.add(Value.from_i32(c))
                 continue
             continue
@@ -1937,143 +1978,143 @@ def exec_expr(
                 convention.i32_rems,
                 convention.i32_remu,
             ]:
-                if is_all_real(b) and b == 0:
+                if utils.is_all_real(b) and b == 0:
                     raise Exception('Integer divide by zero!')
-                elif not is_all_real(b):
+                elif not utils.is_all_real(b):
                     solver.push()
-                    solver.add(Not(b == 0))
-                    if check_sat(solver) == unsat:
+                    solver.add(z3.Not(b == 0))
+                    if utils.check_sat(solver) == z3.unsat:
                         raise Exception('Integer divide by zero!')
                     solver.pop()
             if opcode == convention.i32_add:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = num.int2i32(a + b)
                 else:
-                    computed = simplify(a + b)
+                    computed = z3.simplify(a + b)
                 stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_sub:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = num.int2i32(a - b)
                 else:
-                    computed = simplify(a - b)
+                    computed = z3.simplify(a - b)
                 stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_mul:
-                if is_all_real(a, b):
-                    computed = int2i32(a * b)
+                if utils.is_all_real(a, b):
+                    computed = num.int2i32(a * b)
                 else:
-                    computed = simplify(a * b)
+                    computed = z3.simplify(a * b)
                 stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_divs:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     if a == 0x8000000 and b == -1:
                         raise Exception('Integer overflow!')
                     computed = num.idiv_s(a, b)
                 else:
-                    a, b = to_symbolic(a, 32), to_symbolic(b, 32)
+                    a, b = utils.to_symbolic(a, 32), utils.to_symbolic(b, 32)
                     solver.push()
                     solver.add((a / b) < 0)
-                    sign = -1 if check_sat(solver) == sat else 1
-                    sym_abs = lambda x: If(x >= 0, x, -x)
+                    sign = -1 if utils.check_sat(solver) == z3.sat else 1
+                    sym_abs = lambda x: z3.If(x >= 0, x, -x)
                     a, b = sym_abs(a), sym_abs(b)
-                    computed = simplify(sign * (a / b))
+                    computed = z3.simplify(sign * (a / b))
                     solver.pop()
                 stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_divu:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = num.int2i32(num.int2u32(a) // num.int.int2u32(b))
                 else:
-                    a, b = to_symbolic(a, 32), to_symbolic(b, 32)
-                    computed = simplify(UDiv(a, b))
+                    a, b = utils.to_symbolic(a, 32), utils.to_symbolic(b, 32)
+                    computed = z3.simplify(z3.UDiv(a, b))
                 stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_rems:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = num.irem_s(a, b)
                 else:
-                    a, b = to_symbolic(a, 32), to_symbolic(b, 32)
+                    a, b = utils.to_symbolic(a, 32), utils.to_symbolic(b, 32)
                     solver.push()
                     solver.add(a < 0)
-                    sign = -1 if check_sat(solver) == sat else 1
+                    sign = -1 if utils.check_sat(solver) == z3.sat else 1
                     solver.pop()
-                    sym_abs = lambda x: If(x >= 0, x, -x)
+                    sym_abs = lambda x: z3.If(x >= 0, x, -x)
                     a, b = sym_abs(a), sym_abs(b)
-                    computed = simplify(sign * (a % b))
+                    computed = z3.simplify(sign * (a % b))
                 stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_remu:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = num.int2i32(num.int2u32(a) % num.int2u32(b))
                 else:
-                    a, b = to_symbolic(a, 32), to_symbolic(b, 32)
-                    computed = simplify(URem(a, b))
+                    a, b = utils.to_symbolic(a, 32), utils.to_symbolic(b, 32)
+                    computed = z3.simplify(z3.URem(a, b))
                 stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_and:
                 computed = a & b
-                if is_expr(computed):
-                    computed = simplify(computed)
+                if z3.is_expr(computed):
+                    computed = z3.simplify(computed)
                 stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_or:
                 computed = a | b
-                if is_expr(computed):
-                    computed = simplify(computed)
+                if z3.is_expr(computed):
+                    computed = z3.simplify(computed)
                 stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_xor:
                 computed = a ^ b
-                if is_expr(computed):
-                    computed = simplify(computed)
+                if z3.is_expr(computed):
+                    computed = z3.simplify(computed)
                 stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_shl:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = num.int2i32(a << (b % 0x20))
                 else:
-                    computed = simplify(a << (b & 0x1F)) # [TODO] Two implementation " & 0x1F" and " % 0x20" are equvalent.
+                    computed = z3.simplify(a << (b & 0x1F)) # [TODO] Two implementation " & 0x1F" and " % 0x20" are equvalent.
                 stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_shrs:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = a >> (b % 0x20)
                 else:
-                    computed = simplify(a >> (b & 0x1F))
+                    computed = z3.simplify(a >> (b & 0x1F))
                 stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_shru:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = num.int2u32(a) >> (b % 0x20)
-                elif is_all_real(a) and is_symbolic(b):
-                    computed = simplify(num.int2u32(a) >> (b & 0x1F))
+                elif utils.is_all_real(a) and utils.is_symbolic(b):
+                    computed = z3.simplify(num.int2u32(a) >> (b & 0x1F))
                 else:
-                    b = to_symbolic(b, 32)
-                    computed = simplify(If((a & 0x80000000) == 0x80000000, 
+                    b = utils.to_symbolic(b, 32)
+                    computed = z3.simplify(z3.If((a & 0x80000000) == 0x80000000, 
                                         ((a & 0x7FFFFFFF) >> (b & 0x1F)) + (0x80000000 >> (b & 0x1F)),
                                         ((a & 0x7FFFFFFF) >> (b & 0x1F))))
                 stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_rotl:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = num.int2i32(num.rotl_u32(a, b))
                 else:
-                    a, b = to_symbolic(a, 32), to_symbolic(b, 32)
+                    a, b = utils.to_symbolic(a, 32), utils.to_symbolic(b, 32)
                     b &= 0x1F    # b = b % 0x20
-                    a, b = Concat(BitVecVal(0, 1), a), Concat(BitVecVal(0, 1), b)  # "32bit -> 33bit" for unsigned shift right.
-                    computed = simplify(Extract(31, 0, (a << b) | (a >> (31 - b))))
+                    a, b = z3.Concat(z3.BitVecVal(0, 1), a), z3.Concat(z3.BitVecVal(0, 1), b)  # "32bit -> 33bit" for unsigned shift right.
+                    computed = z3.simplify(z3.Extract(31, 0, (a << b) | (a >> (31 - b))))
                 stack.add(Value.from_i32(computed))
                 continue
             if opcode == convention.i32_rotr:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = num.int2i32(num.rotr_u32(a, b))
                 else:
-                    a, b = to_symbolic(a, 32), to_symbolic(b, 32)
+                    a, b = utils.to_symbolic(a, 32), utils.to_symbolic(b, 32)
                     b &= 0x1F
-                    a, b = Concat(BitVecVal(0, 1), a), Concat(BitVecVal(0, 1), b)
-                    computed = simplify(Extract(31, 0, (a >> b) | a << (31 - b)))
+                    a, b = z3.Concat(z3.BitVecVal(0, 1), a), z3.Concat(z3.BitVecVal(0, 1), b)
+                    computed = z3.simplify(z3.Extract(31, 0, (a >> b) | a << (31 - b)))
                 stack.add(Value.from_i32(num.int2i32(computed)))
                 continue
             continue
@@ -2115,146 +2156,148 @@ def exec_expr(
                 convention.i64_rems,
                 convention.i64_remu,
             ]:
-                if is_all_real(b) and b == 0:
+                if utils.is_all_real(b) and b == 0:
                     raise Exception('Integer divide by zero!')
-                elif not is_all_real(b):
+                elif not utils.is_all_real(b):
                     solver.push()
-                    solver.add(Not(b == 0))
-                    if check_sat(solver) == unsat:
+                    solver.add(z3.Not(b == 0))
+                    if utils.check_sat(solver) == z3.unsat:
                         raise Exception('Integer divide by zero!')
                     solver.pop()
             if opcode == convention.i64_add:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = num.int2i64(a + b)
                 else:
-                    computed = simplify(a + b)
+                    computed = z3.simplify(a + b)
                 stack.add(Value.from_i64(computed))
                 continue
             if opcode == convention.i64_sub:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = num.int2i64(a - b)
                 else:
-                    computed = simplify(a - b)
+                    computed = z3.simplify(a - b)
                 stack.add(Value.from_i64(computed))
                 continue
             if opcode == convention.i64_mul:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = num.int2i64(a * b)
                 else:
-                    computed = simplify(a * b)
+                    computed = z3.simplify(a * b)
                 stack.add(Value.from_i64(computed))
                 continue
             if opcode == convention.i64_divs:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     if a == 0x80000000 and b == -1:
                         raise Exception('Integer overflow!')
                     computed = num.idiv_s(a, b)
                 else:
-                    a, b = to_symbolic(a, 64), to_symbolic(b, 64)
+                    a, b = utils.to_symbolic(a, 64), utils.to_symbolic(b, 64)
                     solver.push()
                     solver.add((a / b) < 0)
-                    sign = -1 if check_sat(solver) == sat else 1
-                    sym_abs = lambda x: If(x >= 0, x, -x)
+                    sign = -1 if utils.check_sat(solver) == z3.sat else 1
+                    sym_abs = lambda x: z3.If(x >= 0, x, -x)
                     a, b = sym_abs(a), sym_abs(b)
-                    computed = simplify(sign * (a / b))
+                    computed = z3.simplify(sign * (a / b))
                     solver.pop()
                 stack.add(Value.from_i64(computed))
                 continue
             if opcode == convention.i64_divu:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = num.int2i64(num.int2u64(a) // num.int2u64(b))
                 else:
-                    a, b = to_symbolic(a, 64), to_symbolic(b, 64)
-                    computed = simplify(UDiv(a, b))
+                    a, b = utils.to_symbolic(a, 64), utils.to_symbolic(b, 64)
+                    computed = z3.simplify(z3.UDiv(a, b))
                 stack.add(Value.from_i64(num.int2i64(computed)))
                 continue
             if opcode == convention.i64_rems:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = num.irem_s(a, b)
                 else:
-                    a, b = to_symbolic(a, 64), to_symbolic(b, 64)
+                    a, b = utils.to_symbolic(a, 64), utils.to_symbolic(b, 64)
                     solver.push()
                     solver.add(a < 0)
-                    sign = -1 if check_sat(solver) == sat else 1
+                    sign = -1 if utils.check_sat(solver) == z3.sat else 1
                     solver.pop()
-                    sym_abs = lambda x: If(x >= 0, x, -x)
+                    sym_abs = lambda x: z3.If(x >= 0, x, -x)
                     a, b = sym_abs(a), sym_abs(b)
-                    computed = simplify(sign * (a % b))
+                    computed = z3.simplify(sign * (a % b))
                 stack.add(Value.from_i64(computed))
                 continue
             if opcode == convention.i64_remu:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = num.int2i32(num.int2u64(a) % num.int2u64(b))
                 else:
-                    a, b = to_symbolic(a, 64), to_symbolic(b, 64)
-                    computed = simplify(URem(a, b))
+                    a, b = utils.to_symbolic(a, 64), utils.to_symbolic(b, 64)
+                    computed = z3.simplify(z3.URem(a, b))
                 stack.add(Value.from_i64(computed))
                 continue
             if opcode == convention.i64_and:
                 computed = a & b
-                if is_expr(computed):
-                    computed = simplify(computed)
+                if z3.is_expr(computed):
+                    computed = z3.simplify(computed)
                 stack.add(Value.from_i64(computed))
                 continue
             if opcode == convention.i64_or:
                 computed = a | b
-                if is_expr(computed):
-                    computed = simplify(computed)
+                if z3.is_expr(computed):
+                    computed = z3.simplify(computed)
                 stack.add(Value.from_i64(computed))
                 continue
             if opcode == convention.i64_xor:
                 computed = a ^ b
-                if is_expr(computed):
-                    computed = simplify(computed)
+                if z3.is_expr(computed):
+                    computed = z3.simplify(computed)
                 stack.add(Value.from_i64(computed))
                 continue
             if opcode == convention.i64_shl:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = num.int2i64(a << (b % 0x40))
                 else:
-                    computed = simplify(a << (b & 0x3F))
+                    computed = z3.simplify(a << (b & 0x3F))
                 stack.add(Value.from_i64(num.int2i64(computed)))
                 continue
             if opcode == convention.i64_shrs:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = a >> (b % 0x40)
                 else:
-                    computed = simplify(a >> (b & 0x3F))
+                    computed = z3.simplify(a >> (b & 0x3F))
                 stack.add(Value.from_i64(computed))
                 continue
             if opcode == convention.i64_shru:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = num.int2u64(a) >> (b % 0x40)
-                elif is_all_real(a) and is_symbolic(b):
-                    computed = simplify(num.int2u64(a) >> (b & 0x3F))
+                elif utils.is_all_real(a) and utils.is_symbolic(b):
+                    computed = z3.simplify(num.int2u64(a) >> (b & 0x3F))
                 else:
-                    b = to_symbolic(b, 64)
-                    computed = simplify(If((a & 0x8000000000000000) == 0x8000000000000000,
+                    b = utils.to_symbolic(b, 64)
+                    computed = z3.simplify(z3.If((a & 0x8000000000000000) == 0x8000000000000000,
                                         ((a & 0x7FFFFFFFFFFFFFFF) >> (b & 0x3F)) + (0x8000000000000000 >> (b & 0x3F)),
                                         ((a & 0x7FFFFFFFFFFFFFFF) >> (b & 0x3F))))
                 stack.add(Value.from_i64(computed))
                 continue
             if opcode == convention.i64_rotl:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = num.int2i64(num.rotr_u64(a, b))
                 else:
-                    a, b = to_symbolic(a, 64), to_symbolic(b, 64)
+                    a, b = utils.to_symbolic(a, 64), utils.to_symbolic(b, 64)
                     b &= 0x3F
-                    a, b = Concat(BitVecVal(0, 1), a), Concat(BitVecVal(0, 1), b)
-                    computed = simplify(Extract(63, 0, (a << b) | (a >> (63 - b))))
+                    a, b = z3.Concat(z3.BitVecVal(0, 1), a), z3.Concat(z3.BitVecVal(0, 1), b)
+                    computed = z3.simplify(z3.Extract(63, 0, (a << b) | (a >> (63 - b))))
                 stack.add(Value.from_i64(computed))
                 continue
             if opcode == convention.i64_rotr:
-                if is_all_real(a, b):
+                if utils.is_all_real(a, b):
                     computed = num.int2i64(num.rotr_u64(a, b))
                 else:
-                    a, b = to_symbolic(a, 64), to_symbolic(b, 64)
+                    a, b = utils.to_symbolic(a, 64), utils.to_symbolic(b, 64)
                     b &= 0x3F
-                    a, b = Concat(BitVecVal(0, 1), a), Concat(BitVecVal(0, 1), b)
-                    computed = simplify(Extract(63, 0, (a >> b) | (a << (63 - b))))
+                    a, b = z3.Concat(z3.BitVecVal(0, 1), a), z3.Concat(z3.BitVecVal(0, 1), b)
+                    computed = z3.simplify(z3.Extract(63, 0, (a >> b) | (a << (63 - b))))
                 stack.add(Value.from_i64(computed))
                 continue
             continue
+
+        # [TODO] float numble problems.
         if opcode >= convention.f32_abs and opcode <= convention.f32_sqrt:
             a = stack.pop().n
             if opcode == convention.f32_abs:
@@ -2470,5 +2513,5 @@ def exec_expr(
                 stack.add(Value.from_f64(num.i642f64(a)))
                 continue
             continue
-    
+
     return [stack.pop() for _ in range(frame.arity)][::-1]

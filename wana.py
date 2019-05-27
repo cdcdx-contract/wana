@@ -64,24 +64,24 @@ class Runtime:
             if e.module not in imps or e.name not in imps[e.module]:
                 raise Exception(f'Global import {e.module}.{e.name} not found!')
             if e.kind == convention.extern_func:
-                a = execution_instruction.HostFunc(self.module.types[e.desc], imps[e.module][e.name])
+                a = execute_instruction.HostFunc(self.module.types[e.desc], imps[e.module][e.name])
                 self.store.funcs.append(a)
-                externvals.append(execution_instruction.ExternValue(e.kind, len(self.store.funcs) - 1))
+                externvals.append(execute_instruction.ExternValue(e.kind, len(self.store.funcs) - 1))
                 continue
             if e.kind == convention.extern_table:
                 a = imps[e.module][e.name]
                 self.store.tables.append(a)
-                externvals.append(execution_instruction.ExternValue(e.kind, len(self.store.tables) - 1))
+                externvals.append(execute_instruction.ExternValue(e.kind, len(self.store.tables) - 1))
                 continue
             if e.kind == convention.extern_mem:
                 a = imps[e.module][e.name]
                 self.store.mems.append(a)
-                externvals.append(execution_instruction.ExternValue(e.kind, len(self.store.mems) - 1))
+                externvals.append(execute_instruction.ExternValue(e.kind, len(self.store.mems) - 1))
                 continue
             if e.kind == convention.extern_global:
-                a = execution_instruction.GlobalInstance(execution_instruction.Value(e.desc.valtype, imps[e.module][e.name]), e.desc.mut)
+                a = execute_instruction.GlobalInstance(execute_instruction.Value(e.desc.valtype, imps[e.module][e.name]), e.desc.mut)
                 self.store.globals.append(a)
-                externvals.append(execution_instruction.ExternValue(e.kind, len(self.store.globals) - 1))
+                externvals.append(execute_instruction.ExternValue(e.kind, len(self.store.globals) - 1))
                 continue
         self.module_instance.instantiate(self.module, self.store, externvals)
 
@@ -89,7 +89,7 @@ class Runtime:
         # Get a function address denoted by the function name.
         for e in self.module_instance.exports:
             if e.name == name and e.value.extern_type == convention.extern_func:
-                return e.value.address
+                return e.value.addr
         raise Exception('Function not found!')
 
     def exec(self, name: str, args: typing.List):
@@ -99,7 +99,7 @@ class Runtime:
         # Mapping check for Python valtype to WebAssembly valtype.
         for i, e in enumerate(func.functype.args):
             if e in [convention.i32, convention.i64]:
-                assert isinstance(args[i], int) or isinstance(args[i], BitVecRef)
+                assert isinstance(args[i], int) or isinstance(args[i], z3.BitVecRef)
             
             # [TODO] Float type symbolic executing.
             if e in [convention.f32, convention.f64]:
@@ -135,9 +135,9 @@ def main():
     parser.add_argument('-e', '--execute', type=str, nargs='*', help='Execute a smart contract')
 
     args = parser.parse_args()
-
     if args.execute:
-        vm = load(args.execute[0], args.execute[1])
+        vm = load(args.execute[0])
+        print(vm.exec('brif', [1, 0]))
 
 if __name__ == '__main__':
     Memory = execute_instruction.MemoryInstance

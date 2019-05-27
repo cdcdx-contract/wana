@@ -1,6 +1,8 @@
 import io
 import math
 import struct
+import ctypes
+import z3
 import utils
 
 u8 = i8 = u16 = i16 = u32 = i32 = u64 = i64 = int
@@ -220,6 +222,131 @@ class BigEndian:
     def pack_f64(n: f64):
         return struct.pack('>d', n)
 
+class MemoryLoad:
+    @staticmethod
+    def i8(r: list):
+        if utils.is_all_real(r[0]):
+            return ctypes.c_int8(r[0]).value
+        else:
+            return r[0]
+
+    @staticmethod
+    def u8(r: list):
+        return r[0]
+
+    @staticmethod
+    def i16(r: list):
+        if utils.is_all_real(r[0], r[1]):
+            return ctypes.c_int16(r[0] + r[1] * 2**8).value
+        else:
+            for i in range(len(r)):
+                r[i] = utils.to_symbolic(r[i], 8)
+            return z3.Concat(r[1], r[0])
+            
+    @staticmethod
+    def u16(r: list):
+        if utils.is_all_real(r[0], r[1]):
+            return ctypes.c_uint16(r[0] + r[1] * 2**8).value
+        else:
+            for i in range(len(r)):
+                r[i] = utils.to_symbolic(r[i], 8)
+            return z3.Concat(r[1], r[0])
+
+    @staticmethod
+    def i32(r: list):
+        if utils.is_all_real(r[0], r[1], r[2], r[3]):
+            return ctypes.c_int32(r[0] + r[1] * 2**8 + r[2] * 2**16 + r[3] * 2**24).value
+        else:
+            for i in range(len(r)):
+                r[i] = utils.to_symbolic(r[i], 8)
+            return z3.Concat(r[3], r[2], r[1], r[0])
+
+    @staticmethod
+    def u32(r: list):
+        if utils.is_all_real(r[0], r[1], r[2], r[3]):
+            return ctypes.c_uint32(r[0] + r[1] * 2**8 + r[2] * 2**16 + r[3] * 2**24).value
+        else:
+            for i in range(len(r)):
+                r[i] = utils.to_symbolic(r[i], 8)
+            return z3.Concat(r[3], r[2], r[1], r[0])
+
+    @staticmethod
+    def i64(r: list):
+        if utils.is_all_real(r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7]):
+            return ctypes.c_int64(r[0] + r[1] * 2**8 + r[2] * 2**16 + r[3] * 2**24 + 
+                                  r[4] * 2**32 + r[5] * 2**40 + r[6] * 2**48 + r[7] * 2**56)
+        else:
+            for i in range(len(r)):
+                r[i] = utils.to_symbolic(r[i], 8)
+            return z3.Concat(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0])
+    @staticmethod
+    def u64(r: list):
+        if utils.is_all_real(r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7]):
+            return ctypes.c_uint64(r[0] + r[1] * 2**8 + r[2] * 2**16 + r[3] * 2**24 + 
+                                  r[4] * 2**32 + r[5] * 2**40 + r[6] * 2**48 + r[7] * 2**56)
+        else:
+            for i in range(len(r)):
+                r[i] = utils.to_symbolic(r[i], 8)
+            return z3.Concat(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0])
+class MemoryStore:
+    @staticmethod
+    def pack_i8(n: i8):
+        if utils.is_all_real(n):
+            return [n & 0xFF]
+        else:
+            return [n]
+    
+    @staticmethod
+    def pack_u8(n: u8):
+        if utils.is_all_real(n):
+            return [n & 0xFF]
+        else:
+            return [n]
+
+    @staticmethod
+    def pack_i16(n: i16):
+        if utils.is_all_real(n):
+            return [n & 0xFF, n & 0xFF00]
+        else:
+            return [z3.Extract(7, 0, n), z3.Extract(15, 8, n)]
+
+    @staticmethod
+    def pack_u16(n: u16):
+        if utils.is_all_real(n):
+            return [n & 0xFF, n & 0xFF00]
+        else:
+            return [z3.Extract(7, 0, n), z3.Extract(15, 8, n)]
+
+    @staticmethod
+    def pack_i32(n: i32):
+        if utils.is_all_real(n):
+            return [n & 0xFF, n & 0xFF00, n & 0xFF0000, n & 0xFF000000]
+        else:
+            return [z3.Extract(7, 0, n), z3.Extract(15, 8, n), z3.Extract(23, 16, n), z3.Extract(31, 24, n)]
+
+    @staticmethod
+    def pack_u32(n: u32):
+        if utils.is_all_real(n):
+            return [n & 0xFF, n & 0xFF00, n & 0xFF0000, n & 0xFF000000]
+        else:
+            return [z3.Extract(7, 0, n), z3.Extract(15, 8, n), z3.Extract(23, 16, n), z3.Extract(31, 24, n)]
+
+    @staticmethod
+    def pack_i64(n: i64):
+        if utils.is_all_real(n):
+            return [n & 0xFF, n & 0xFF00, n & 0xFF0000, n & 0xFF000000, n & 0xFF00000000,
+                    n & 0xFF0000000000, n & 0xFF000000000000, n & 0xFF000000000000]
+        else:
+            return [z3.Extract(7, 0, n), z3.Extract(15, 8, n), z3.Extract(23, 16, n), z3.Extract(31, 24, n),
+                    z3.Extract(39, 32, n), z3.Extract(47, 40, n), z3.Extract(55, 48, n), z3.Extract(63, 56, n)]
+    @staticmethod
+    def pack_u64(n: i64):
+        if utils.is_all_real(n):
+            return [n & 0xFF, n & 0xFF00, n & 0xFF0000, n & 0xFF000000, n & 0xFF00000000,
+                    n & 0xFF0000000000, n & 0xFF000000000000, n & 0xFF000000000000]
+        else:
+            return [z3.Extract(7, 0, n), z3.Extract(15, 8, n), z3.Extract(23, 16, n), z3.Extract(31, 24, n),
+                    z3.Extract(39, 32, n), z3.Extract(47, 40, n), z3.Extract(55, 48, n), z3.Extract(63, 56, n)]
 
 def leb(reader, maxbits=32, signed=False):
     if isinstance(reader, (bytes, bytearray)):
