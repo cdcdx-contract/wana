@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 i32 = 0x7f
 i64 = 0x7e
 f32 = 0x7d

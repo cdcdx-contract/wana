@@ -1,53 +1,15 @@
 #!/usr/bin/python3
 
-# import argparse
-# import os
-
-# def main(args):
-
-#     # Set the commands for contract analysis
-#     parser = argparse.ArgumentParser()
-#     parser.add_argument('-t', '--wast', type=str, help='Check WAST format file')
-#     parser.add_argument('-m', '--wasm', type=str, help='Check WASM format file')
-
-#     args = parser.parse_args(args)
-
-#     # Compile the .wast file to .wasm file
-#     if args.wast:
-#         wasm_code_path = './tmp/temp.wasm'
-#         compile_contract(args.wast, wasm_code_path)
-#         if not os.path.isfile(wasm_code_path):
-#             print('Contract %s does not exist!' % args.wasm[1])
-#     if args.wast or args.wasm:
-#         print('Successfully input command...')
-    
-#     # Create the private blockchain
-#     create_private_chain('emptychain', GlobalVar.eos_account)
-
-#     # Deploy the contract
-#     if args.wast:
-#         contract_address = deploy_contract(wasm_code_path, GlobalVar.eos_account)
-#     else:
-#         contract_address = deploy_contract(args.wasm, GlobalVar.eos_account)
-    
-#     if contract_address is None:
-#         print('Failed to deploy the contract!')
-#         return
-
 import argparse
 import os
 import typing
 import z3
 
-""" from wana import convention
-from wana import execution_instruction
-from wana import log
-from wana import runtime_structure """
-
 import convention
 import execute_instruction
 import log
 import runtime_structure
+from global_variables import path_conditions_and_results
 
 class Runtime:
     # A webassembly runtime manages Store, Stack, and other structures.
@@ -111,7 +73,28 @@ class Runtime:
         log.debugln(f'Running function {name}({", ".join([str(e) for e in args])}):')
         r = execute_instruction.call(self.module_instance, func_addr, self.store, stack)
         if r:
-            return r[0].n
+            return r
+        return None
+
+    def exec_by_address(self, address: int, args: typing.List):
+        # Invoke a function denoted by the function address with the provided arguments.
+        func = self.store.funcs[self.module_instance.funcaddrs[address]]
+        # Mapping check for Python valtype to WebAssembly valtype.
+        for i, e in enumerate(func.functype.args):
+            if e in [convention.i32, convention.i64]:
+                assert isinstance(args[i], int) or isinstance(args[i], z3.BitVecRef)
+            
+            # [TODO] Float type symbolic executing.
+            if e in [convention.f32, convention.f64]:
+                assert isinstance(args[i], float)
+
+            args[i] = execute_instruction.Value(e, args[i])
+        stack = execute_instruction.Stack()
+        stack.ext(args)
+        log.debugln(f'Running function address {address}({", ".join([str(e) for e in args])}):')
+        r = execute_instruction.call(self.module_instance, address, self.store, stack)
+        if r:
+            return r
         return None
 
 # These code are the API for using.
@@ -127,19 +110,25 @@ def load(name: str, imps: typing.Dict = None) -> Runtime:
         return Runtime(module, imps)
 
 def main():
-
     # Set the commands for contract analysis
     parser = argparse.ArgumentParser()
-    parser.add_argument('-t', '--wast', type=str, help='Check WAST format file')
-    parser.add_argument('-m', '--wasm', type=str, help='Check WASM format file')
+    parser.add_argument('-wt', '--wast', type=str, help='Check WAST format file')
+    parser.add_argument('-wm', '--wasm', type=str, help='Check WASM format file')
     parser.add_argument('-e', '--execute', type=str, nargs='*', help='Execute a smart contract')
-
+    parser.add_argument('-v', '--version', action='version', version='wana version 0.1.0 - buaa-scse-les')
+    parser.add_argument('-t', '--timeout', help='Timeout for analysis using z3 in ms.', action='store', type=int)
     args = parser.parse_args()
+
+    # Execute all export functions of wasm
     if args.execute:
         vm = load(args.execute[0])
-        print(vm.exec('brif', [1, 0]))
+        for e in vm.module_instance.exports:
+            if e.value.extern_type == convention.extern_func:
+                print(vm.exec_by_address(e.value.addr, [z3.BitVec('x', 32), 32]))
+                print(path_conditions_and_results)
 
 if __name__ == '__main__':
+    Ctx = execute_instruction.Ctx
     Memory = execute_instruction.MemoryInstance
     Value = execute_instruction.Value
     Table = execute_instruction.TableInstance

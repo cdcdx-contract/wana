@@ -1,874 +1,17 @@
-# from instructions import *
-# from utils import *
-# from math import *
-# import struct  # The "struct" package could interpret binary format.
-# from ctypes import *
-
-# def execute_one_instruction(instruction, stack, locals_value, globals_value, memory, elements=None):
-#     # Executing the singal instruction
-#     op = opcode[instruction[0]]
-#     top = len(stack)
-
-#     if op == 'unreachable':
-#         raise Exception("Reached unreachable!")
-
-#     elif op == 'nop':
-#         pass  # The 'nop' opcode means 'Do nothing'.
-
-#     elif op == 'block':
-#         arity = 0 if i.immediate_arguments == convention.empty else 1
-#         stack.add(Label(arity, expr.composition[pc][-1] + 1))
-
-#     elif op == 'loop':
-#         stack.add(Label(0, expr.composition[pc][0]))
-
-#     elif op == 'if':
-#         c = stack.pop().n
-#         arity = 0 if i.immediate_arguments == convention.empty else 1
-#         stack.add(Label(arity, expr.composition[pc][-1] + 1))
-#         if c != 0:
-#             return
-#         if len(expr.composition[pc]) > 2:
-#             pc = expr.compositon[pc][1]
-#             return
-#         pc = expr.composition[pc][-1] - 1
-
-#     elif op == 'else':
-#         for i in range(len(stack.data)):
-#             i = -1 - i
-#             e = stack.data[i]
-#             if isinstance(e, Label):
-#                 pc = e.continuation - 1
-#                 del stack.data[i]
-#                 break
-
-#     elif op == 'end':
-#         if stack.status() == Label:
-#             for i in range(len(stack.data)):
-#                 i = -1 - i
-#                 if isinstance(stack.data[i], Label):
-#                     del stack.data[i]
-#                     break
-
-#     elif op == 'br':
-
-#         targer_address = stack[top-1]
-#         if utils.is_symbolic(target_address):
-#             try:
-#                 target_address = int(str(z3.simplify(target_address)))
-#             except:
-#                 raise TypeError("Target address must be an integer")
-
-#     elif op == 'br_if':
-#         pass
-
-#     elif op == 'br_table':
-#         pass
-
-#     elif op == 'return':
-#         pass
-
-#     elif op == 'call':
-#         pass
-
-#     elif op == 'call_indirect':
-#         pass
-
-#     elif op == 'drop':
-#         top -= 1
-
-#     elif op == 'select':
-#         first = stack[top-1]
-#         second = stack[top-2]
-#         third = stack[top-3]
-#         if utils.is_all_real(first, second, third):
-#             if first == 0:
-#                 computed = second
-#             else:
-#                 computed = third
-#         else:
-#             first = utils.to_symbolic(first)
-#             second = utils.to_symbolic(second)
-#             third = utils.to_symbolic(third)
-
-#             computed = z3.If(first == 0, second, third)
-        
-#         stack[top-3] = z3.simplify(computed) if z3.is_expr(computed) else computed
-#         top -= 2
-
-
-#     elif op == 'get_local':
-#         locals_pos = instruction[1]
-#         stack.append(locals_value[locals_pos])
-#         top += 1
-
-#     elif op == 'set_local':
-#         locals_pos = instruction[1]
-#         locals_value[locals_pos] = stack[top-1]
-#         top -= 1
-
-#     elif op == 'tee_local':
-#         locals_pos = instruction[1]
-#         locals_value[locals_pos] = stack[top-1]
-
-#     elif op == 'get_global':
-#         globals_pos = instruction[1]
-#         stack.append(globals_value[globals_pos])
-#         top += 1
-
-#     elif op == 'set_global':
-#         globals_pos = instruction[1]
-#         globals_value[globals_pos] = stack[top-1]
-#         top -= 1
-
-#     elif op == 'i32.load':
-#         align = instruction[1]
-#         offset = instruction[2]
-
-#         if memory[0] and 2**align <= 4:
-#             pass
-
-#     elif op == 'i64.load':
-#         align = instruction[1]
-#         offset = instruction[2]
-#         if memory[0] and 2**align <= 8:
-#             pass
-
-#     elif op == 'f32.load':
-#         pass
-
-#     elif op == 'f64.load':
-#         pass
-
-#     elif op == 'i32.load8_s':
-#         pass
-
-#     elif op == 'i32.load8_u':
-#         pass
-
-#     elif op == 'i32.load16_s':
-#         pass
-
-#     elif op == 'i32.load16_u':
-#         pass
-
-#     elif op == 'i64.load8_s':
-#         pass
-
-#     elif op == 'i64.load8_u':
-#         pass
-
-#     elif op == 'i64.load16_s':
-#         pass
-
-#     elif op == 'i64.load16_u':
-#         pass
-    
-#     elif op == 'i32.store':
-#         pass
-
-#     elif op == 'i64.store':
-#         pass
-
-#     elif op == 'f32.store':
-#         pass
-
-#     elif op == 'f64.store':
-#         pass
-
-#     elif op == 'f64.store':
-#         pass
-
-#     elif op == 'i32.store8':
-#         pass
-
-#     elif op == 'i32.store16':
-#         pass
-
-#     elif op == 'i64.store8':
-#         pass
-
-#     elif op == 'i64.store16':
-#         pass
-
-#     elif op == 'i64.store32':
-#         pass
-
-#     elif op == 'memory.size':
-#         pass
-
-#     elif op == 'memory.grow':
-#         pass
-
-#     elif op == 'i32.const':
-#         i32_value = instruction[1]
-#         stack.append(i32_value)
-#         top += 1
-
-#     elif op == 'i64.const':
-#         i64_value = instruction[1]
-#         stack.append(i64_value)
-#         top += 1
-
-#     elif op == 'f32.const':
-#         f32_value = instruction[1]
-#         stack.append(f32_value)
-#         top += 1
-
-#     elif op == 'f64.const':
-#         f64_value = instruction[1]
-#         stack.append(f64_value)
-#         top += 1
-
-#     elif op in ['i32.eqz', 'i64.eqz']:
-#         first = stack[top-1]
-#         if is_real(first):
-#             if first == 0:
-#                 computed = 1
-#             else:
-#                 computed = 0
-#         else:
-#             computed = z3.If(first == 0, z3.BitVecVal(1, int(op[1:3])), z3.BitVecVal(0, int(op[1:3])))
-        
-#         stack[top-1] = z3.simplify(computed) if z3.is_expr(computed) else computed
-
-#     elif op in ['i32.eq', 'i64.eq']:
-#         first = stack[top-1]
-#         second = stack[top-2]
-#         if utils.is_all_real(first, second):
-#             if first == second:
-#                 computed = 1
-#             else:
-#                 computed = 0
-#         else:
-#             first = utils.to_symbolic(first, int(op[1:3]))
-#             second = utils.to_symbolic(second, int(op[1:3]))
-#             computed = z3.If( first == second, z3.BitVecVal(1, int(op[1:3])), z3.BitVecVal(0, int(op[1:3])))
-        
-#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
-#         top -= 1
-
-#     elif op in ['f32.eq', 'f64.eq']:
-#         pass
-
-#     elif op in ['i32.ne', 'i64.ne']:
-#         first = stack[top-1]
-#         second = stack[top-2]
-#         if utils.is_all_real(first, second):
-#             if first != second:
-#                 computed = 1
-#             else:
-#                 computed = 0
-#         else:
-#             first = utils.to_symbolic(first, int(op[1:3]))
-#             second = utils.to_symbolic(second, int(op[1:3]))
-#             computed = z3.If( eq(first, second), z3.BitVecVal(0, int(op[1:3])), z3.BitVecVal(1, int(op[1:3])))
-        
-#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
-#         top -= 1
-    
-#     elif op in ['f32.ne', 'f64.ne']:
-#         pass
-
-#     elif op in ['i32.lt_u', 'i64.lt_u']:
-#         first = stack[top-1]
-#         second = stack[top-2]
-#         if utils.is_all_real(first, second):
-#             if first < second:
-#                 computed = 1
-#             else:
-#                 computed = 0
-#         else:
-#             computed = z3.If(ULT(first, second), z3.BitVecVal(1, int(op[1:3])), z3.BitVecVal(0, Int(op[1:3])))
-        
-#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
-#         top -= 1
-
-#     elif op in ['i32.lt_s', 'i64.lt_s']:
-#         first = stack[top-1]
-#         second = stack[top-2]
-#         if utils.is_all_real(first, second):
-#             if first < second:
-#                 computed = 1
-#             else:
-#                 computed = 0
-#         else:
-#             computed = z3.If(first < second, z3.BitVecVal(1, int(op[1:3])), z3.BitVecVal(0, Int(op[1:3])))
-        
-#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
-#         top -= 1
-
-#     elif op in ['f32.lt', 'f64.lt']:
-#         pass
-
-#     elif op in ['i32.gt_u', 'i64.gt_u']:
-#         first = stack[top-1]
-#         second = stack[top-2]
-#         if utils.is_all_real(first, second):
-#             if first < second:
-#                 computed = 1
-#             else:
-#                 computed = 0
-#         else:
-#             computed = z3.If(z3.UGT(first, second), z3.BitVecVal(1, int(op[1:3])), z3.BitVecVal(0, Int(op[1:3])))
-        
-#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
-#         top -= 1
-
-#     elif op in ['i32.gt_s', 'i64.gt_s']:
-#         first = stack[top-1]
-#         second = stack[top-2]
-#         if utils.is_all_real(first, second):
-#             if first < second:
-#                 computed = 1
-#             else:
-#                 computed = 0
-#         else:
-#             computed = z3.If(first > second, z3.BitVecVal(1, int(op[1:3])), z3.BitVecVal(0, Int(op[1:3])))
-        
-#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
-#         top -= 1
-
-#     elif op in ['f32.gt', 'f64.gt']:
-#         pass
-
-#     elif op in ['i32.le_u', 'i64.le_u']:
-#         first = stack[top-1]
-#         second = stack[top-2]
-#         if utils.is_all_real(first, second):
-#             if first < second:
-#                 computed = 1
-#             else:
-#                 computed = 0
-#         else:
-#             computed = z3.If(z3.ULE(first, second), z3.BitVecVal(1, int(op[1:3])), z3.BitVecVal(0, Int(op[1:3])))
-        
-#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
-#         top -= 1
-
-#     elif op in ['i32.le_s', 'i64.le_s']:
-#                 first = stack[top-1]
-#         second = stack[top-2]
-#         if utils.is_all_real(first, second):
-#             if first < second:
-#                 computed = 1
-#             else:
-#                 computed = 0
-#         else:
-#             computed = z3.If(first <= second, z3.BitVecVal(1, int(op[1:3])), z3.BitVecVal(0, Int(op[1:3])))
-        
-#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
-#         top -= 1
-
-#     elif op in ['f32.le', 'f64.le']:
-#         pass
-
-#     elif op in ['i32.ge_u', 'i64.ge_u']:
-#         first = stack[top-1]
-#         second = stack[top-2]
-#         if utils.is_all_real(first, second):
-#             if first < second:
-#                 computed = 1
-#             else:
-#                 computed = 0
-#         else:
-#             computed = z3.If(UGE(first, second), z3.BitVecVal(1, int(op[1:3])), z3.BitVecVal(0, Int(op[1:3])))
-        
-#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
-#         top -= 1
-
-#     elif op in ['i32.ge_s',  'i64.ge_s']:
-#         first = stack[top-1]
-#         second = stack[top-2]
-#         if utils.is_all_real(first, second):
-#             if first < second:
-#                 computed = 1
-#             else:
-#                 computed = 0
-#         else:
-#             computed = z3.If(first >= second, z3.BitVecVal(1, int(op[1:3])), z3.BitVecVal(0, Int(op[1:3])))
-        
-#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
-#         top -= 1
-
-#     elif op in ['f32.ge', 'f64.ge']:
-#         pass
-    
-#     elif op in ['i32.clz', 'i64.clz']:
-#         if stack[top-1] == 0:
-#             stack[top-1] = int(op[1:3])
-#         else:
-#             stack[top-1] = int(op[1:3]) - bin(stack[top-1]) + 2  # Binary format '0b***'
-    
-#     elif op in ['i32.ctz', 'i64.ctz']:
-#         if stack[top-1] == 0:
-#             stack[top-1] = int(op[1:3])
-#         else:
-#             binary_num = bin(stack[top-1])
-#             stack[top-1] = 0
-#             for i in range(len(binary_num)-1, -1, -1):
-#                 if binary_num[i] != '0':
-#                     break
-#                 stack[top-1] += 1
-
-    
-#     elif op in ['i32.popcnt', 'i64.popcnt']:
-#         binary_num = bin(stack[top-1])[2:]  # Binary format '0b' is useless
-#         stack[top-1] = 0
-#         for elem in binary_num:
-#             if elem != '0':
-#                 stack[top-1] += 1
-    
-#     elif op in ['i32.add', 'i64.add']:
-#         first = stack[top-1]
-#         second = stack[top-2]
-#         if is_real(first) and utils.is_symbolic(second):
-#             first = z3.BitVecVal(first, int(op[1:3]))
-#             computed = first + second
-#         elif utils.is_symbolic(first) and is_real(second):
-#             second = z3.BitVecVal(second, int(op[1:3]))
-#             computed = first + second
-#         else:
-#             computed = (first + second) % (2 ** 32)
-
-#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
-#         top -= 1
-
-#     elif op in ['i32.sub', 'i64.sub']:
-#         first = stack[top-1]
-#         second = stack[top-2]
-#         if is_real(first) and utils.is_symbolic(second):
-#             first = z3.BitVecVal(first, int(op[1:3]))
-#             computed = first - second
-#         elif utils.is_symbolic(first) and is_real(second):
-#             second = z3.BitVecVal(second, int(op[1:3]))
-#             computed = first - second
-#         else:
-#             computed = (first - second) % (2 ** int(op[1:3]))
-        
-#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
-#         top -= 1
-
-#     elif op in ['i32.mul', 'i64.mul']:
-#         first = stack[top-1]
-#         second = stack[top-2]
-#         if is_real(first) and utils.is_symbolic(second):
-#             first = z3.BitVecVal(first, int(op[1:3]))
-#         elif utils.is_symbolic(first) and is_real(second):
-#             second = z3.BitVecVal(second, int(op[1:3]))
-#         computed = first * second % int(op[1:3])
-
-#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
-#         top -= 1
-
-#     elif op in ['i32.div_u', 'i64.div_u']:
-#         first = stack[top-1]
-#         second = stack[top-2]
-#         if utils.is_all_real(first, second):
-#             if second == 0:
-#                 computed = 0
-#                 # TODO: Error Processing!
-#             else:
-#                 computed = first / second
-#         else:
-#             first = z3.BitVecVal(first, int(op[1:3])) if is_real(first) else first
-#             second = z3.BitVecVal(second, int(op[1:3])) if is_real(second) else second
-#             solver.push()
-#             solver.add(z3.Not(second==0))
-#             if utils.check_sat(solver) == z3.unsat:
-#                 computed = 0
-#             else:
-#                 computed = UDIV(first, second)
-#             solver.pop()
-#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
-    
-#     elif op in ['i32.div_s', 'i64.div_s']:
-#         first = stack[top-1]
-#         second = stack[top-2]
-#         if utils.is_all_real(first, second):
-#             if second == 0:
-#                 computed = 0
-#             elif first == -2**(int(op[1:3])-1) and second == -1:
-#                 computed = -2**(int(op[1:3])-1)
-#             else:
-#                 sign = -1 if (fitst / second) < 0 else 1
-#                 computed = sign * (abs(first) / abs(second))
-#         else:
-#             first = z3.BitVecVal(first, int(op[1:3])) if is_real(first) else first
-#             second = z3.BitVecVal(second, int(op[1:3])) if is_real(second) else second
-#             solver.push()
-#             solver.add(z3.Not(second==0))
-#             if utils.check_sat(solver) == z3.unsat:
-#                 computed = 0
-#             else:
-#                 solver.push()
-#                 solver.add(z3.Not(And(first == -2*(int(op[1:3])-1), second == -1)))
-#                 if utils.check_sat(solver) == z3.unsat:
-#                     computed = -2**(int(op[1:3])-1)
-#                 else:
-#                     solver.push()
-#                     solver.add(first / second < 0)
-#                     sign = -1 if utils.check_sat(solver) == z3.sat else 1
-#                     z3_abs = lambda x: z3.If(x >= 0, x, -x)
-#                     first = z3_abs(first)
-#                     second = z3_abs(second)
-#                     computed = sign * (first / second)
-#                     solver.pop()
-#                 solver.pop()
-#             solver.pop()
-
-#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
-#         top -= 1
-
-#     elif op in ['i32.rem_s', 'i64.rem_s']:
-#         first = stack[top-1]
-#         second = stack[top-2]
-#         if utils.is_all_real(first, second):
-#             if second == 0:
-#                 computed = 0
-#             else:
-#                 sign = -1 if first < 0 else 1
-#                 computed = sign * (abs(first) % abs(second))
-
-#         else:
-#             first = z3.BitVecVal(first, int(op[1:3])) if is_real(first) else first
-#             second = z3.BitVecVal(second, int(op[1:3])) if is_real(second) else second
-            
-#             solver.push()
-#             solver.add(z3.Not(second == 0))
-#             if utils.check_sat == z3.unsat:
-#                 computed = 0
-#             else:
-#                 first = to_signed(first, int(op[1:3]))
-#                 second = to_signed(second, int(op[1:3]))
-#                 solver.push()
-#                 solver.add(first < 0)
-#                 sign = z3.BitVecVal(-1, int(op[1:3])) if utils.check_sat(solver) == z3.sat else z3.BitVecVal(1, int(op[1:3]))
-#                 solver.pop()
-
-#                 z3_abs = lambda x: z3.If(x >= 0, x, -x)
-#                 first = z3_abs(first)
-#                 second = z3_abs(second)
-
-#                 computed = sign * (first % second)
-#             solver.pop()
-
-#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
-#         top -= 1
-
-#     elif op in ['i32.rem_u', 'i64.rem_u']:
-#         first = stack[top-1]
-#         second = stack[top-2]
-        
-#         if utils.is_all_real(first, second):
-#             if second == 0:
-#                 computed = 0
-#             else:
-#                 first = to_unsigned(first, int(op[1:3]))
-#                 second = to_unsigned(second, int(op[1:3]))
-#                 computed = first % second
-#         else:
-#             first = utils.to_symbolic(first)
-#             second = utils.to_symbolic(second)
-            
-#             solver.push()
-#             solver.add(z3.Not(second==0))
-#             if utils.check_sat(solver) == z3.unsat:
-#                 computed = 0
-#             else:
-#                 computed = URem(first, second)
-#             solver.pop()
-
-
-#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
-#         top -= 1
-
-#     elif op in ['i32.and', 'i64.and']:
-#         first = stack[top-1]
-#         second = stack[top-2]
-#         computed = first & second
-#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
-#         top -= 1
-
-#     elif op in ['i32.or', 'i64.or']:
-#         first = stack[top-1]
-#         second = stack[top-2]
-#         computed = first | second
-#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
-#         top-= 1
-
-#     elif op in ['i32.xor', 'i64.xor']:
-#         first = stack[top-1]
-#         second = stack[top-2]
-#         computed = first ^ second
-#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
-#         top -= 1
-
-#     elif op in ['i32.shl', 'i64.shl']: # waiting to fix-up
-#         first = stack[top-1]
-#         second = stack[top-2]
-#         modulo = int(op[1:3])
-
-#         if utils.is_all_real(first, second):
-#             if first >= modulo or first < 0:
-#                 computed = 0
-#             else:
-#                 computed = second << (first % modulo)
-#         else:
-#             first = utils.to_symbolic(first, modulo)
-#             second = utils.to_symbolic(second, modulo)
-#             solver.push()
-#             solver.add(z3.Not(Or(first >= modulo, first < 0)))
-#             if utils.check_sat(solver) == z3.unsat:
-#                 computed = 0
-#             else:
-#                 computed = second << (first % modulo)
-#             solver.pop()
-        
-#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
-#         top -= 1
-
-#     elif op in ['i32.shr_s', 'i64.shr_s']:
-#         first = stack[top-1]
-#         second = stack[top-2]
-#         modulo = int(op[1:3])
-        
-#         if utils.is_all_real(first, second):
-#             if first < 0:
-#                 computed = 0
-#             else:
-#                 computed = second >> (first % modulo)
-#         else:
-#             first = utils.to_symbolic(first, modulo)
-#             second = utils.to_symbolic(second, modulo)
-#             solver.push()
-#             solver.add(z3.Not(first < 0))
-#             if utils.check_sat(solver) == z3.unsat:
-#                 computed = 0
-#             else:
-#                 computed = second >> (first % modulo)
-#             solver.pop()
-        
-#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
-#         top -= 1
-
-#     elif op in ['i32.shr_u', 'i64.shr_u']: # TODO: fix-up
-#         first = stack[top-1]
-#         second = stack[top-2]
-#         modulo = int(op[1:3])
-#         bit_len = int('F' * (modulo // 4), base=16)
-
-#         if utils.is_all_real(first, second):
-#             if first < 0 or first > modulo:
-#                 computed = 0
-#             elif first == 0:
-#                 computed = stack[top-2]
-#             else:
-#                 computed = (second & bit_len) >> (first % modulo)
-#         else:
-#             first = utils.to_symbolic(first, modulo)
-#             second = utils.to_symbolic(second, modulo)
-#             solver.push()
-#             solver.add(z3.Not(first < 0))
-#             if utils.check_sat(solver) == z3.unsat:
-#                 computed = 0
-#             else:
-#                 computed = UShR(second, (first % modulo)) 
-#             solver.pop()
-
-#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
-#         top -= 1
-
-#     elif op in ['i32.rotl', 'i64.rotl']: # TODO: fix-up
-#         first = stack[top-1]
-#         second = stack[top-2]
-#         modulo = int(op[1:3])
-#         bit_len = int('F' * (modulo // 4), base=16)
-
-#         if utils.is_all_real(first, second):
-#             move_len = first % modulo
-#             second &= bit_len
-#             computed = (second >> (modulo - move_len)) | (second << move_len)
-#         else:
-#             first = utils.to_symbolic(first, modulo)
-#             second = utils.to_symbolic(second, modulo)
-#             move_len = first % modulo
-#             second &= bit_len
-#             computed = (second >> (modulo - move_len)) | (second << move_len)
-        
-#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
-#         top -= 1
-
-#     elif op in ['i32.rotr', 'i64.rotr']: # TODO: fix-up
-#         first = stack[top-1]
-#         second = stack[top-2]
-#         modulo = int(op[1:3])
-#         bit_len = int('F' * (modulo // 4), base=16)
-
-#         if utils.is_all_real(first, second):
-#             move_len = first % modulo
-#             second &= bit_len
-#             computed = (second << (modulo - move_len)) | (second >> move_len)
-#         else:
-#             first = utils.to_symbolic(first, modulo)
-#             second = utils.to_symbolic(second, modulo)
-#             move_len = first % modulo
-#             second &= bit_len
-#             computed = (second << (modulo - move_len)) | (second >> move_len)
-        
-#         stack[top-2] = z3.simplify(computed) if z3.is_expr(computed) else computed
-#         top -= 1
-
-#     # TODO: float number
-#     elif op in ['f32.abs', 'f64.abs']:
-#         first = stack[top-1]
-
-#         if is_real(first):
-#             computed = abs(first)
-#         else:
-#             z3_abs = lambda x: z3.If(x >= 0, x, -x)
-#             computed = z3_abs(first)
-        
-#         computed = z3.simplify(computed) if z3.is_expr(computed) else computed
-
-#     elif op in ['f32.neg', 'f64.neg']:
-#         stack[top-1] = -stack[top-1]
-
-#     elif op in ['f32.ceil', 'f64.ceil']:
-#         stack[top-1] = float(ceil(stack[top-1]))
-
-#     elif op in ['f32.floor', 'f64.floor']:
-#         stack[top-1] = float(floor(stack[top-1]))
-
-#     elif op in ['f32.trunc', 'f64.trunc']:
-#         stack[top-1] = float(trunc(stack[top-1]))
-
-#     elif op in ['f32.nearest', 'f64.nearest']:
-#         stack[top-1] = float(round(stack[top-1]))
-
-#     elif op in ['f32.sqrt', 'f64.sqrt']:
-#         stack[top-1] = sqrt(stack[top-1])
-
-#     elif op in ['f32.add', 'f64.add']:
-#         stack[top-2] = stack[top-2] + stack[top-1]
-
-#     elif op in ['f32.sub', 'f64.sub']:
-#         stack[top-2] = stack[top-2] - stack[top-1]
-#         top -= 1
-
-#     elif op in ['f32.mul', 'f64.mul']:
-#         stack[top-2] = stack[top-2] * stack[top-1]
-#         top -= 1
-
-#     elif op in ['f32.div', 'f64.div']:
-#         stack[top-2] = stack[top-2] / stack[top-1]
-#         top -= 1
-
-#     elif op in ['f32.min', 'f64.min']:
-#         stack[top-2] = min(stack[top-2], stack[top-1])
-#         top -= 1
-    
-#     elif op in ['f32.max', 'f64.max']:
-#         stack[top-2] = max(stack[top-2], stack[top-1])
-#         top -= 1
-
-#     elif op in ['f32.copysign', 'f64.copysign']:
-#         stack[top-2] = copysign(stack[top-2], stack[top-1])
-#         top -= 1
-
-#     # END: Float
-
-#     elif op in ['i32.wrap_i64']:
-#         first = stack[top-1]
-        
-#         if is_real(first):
-#             sign = -1 if first < 0 else 1
-#             computed = sign * (abs(first) % 2**32)
-#         else:
-#             solver.push()
-#             solver.add(first < 0)
-#             sign = z3.BitVecVal(-1, 32) if utils.check_sat(solver) == z3.sat \
-#                 else z3.BitVecVal(1, 32)
-#             solver.pop()
-
-#             z3_abs = lambda x: z3.If(x >= 0, x, -x)
-#             first = z3_abs(first)
-#             computed = sign * (first % 2**32)
-        
-#         stack[top-1] = z3.simplify(computed) if z3.is_expr(computed) else computed
-
-#     # TODO: Float-related instructon.
-#     elif op in ['i32.trunc_s/f32', 'i32.trunc_u/f32', 'i32.trunc_s/f64', 'i32.trunc_u/f64']:
-#         stack[top-1] = int(stack[top-1])
-
-#     elif op in ['i64.extend_i32_s']:
-#         first = stack[top-1]
-#         if is_real(first):
-#             computed = first
-#         else:
-#             computed = SignExt(32, first)
-        
-#         stack[top-1] = z3.simplify(computed) if z3.is_expr(computed) else computed
-    
-#     elif op in ['i64.extend_i32_u']:
-#         first = stack[top-1]
-#         if is_real(first):
-#             computed = first & 0xFFFFFFFF
-#         else:
-#             computed = ZeroExt(32, first)
-        
-#         stack[top-1] = z3.simplify(computed) if z3.is_expr(computed) else computed
-
-#     elif op in ['i64.trunc_s/f32', 'i64.trunc_u/f32', 'i64.trunc_s/f64', 'i64.trunc_u/f64']:  # TODO : Implement the function
-#         stack[top-1] = int(stack[top-1])
-    
-#     elif op in ['f32.convert_s/i32', 'f32.convert_u/i32', 'f32.convert_s/i64', 'f32.convert_u/i64']:
-#         stack[top-1] = float(stack[top-1])
-
-#     elif op in ['f32.demote/f64']:
-#         pass
-
-#     elif op in ['f64.convert_s/i32', 'f64.convert_u/i32', 'f64.convert_s/i64', 'f64.convert_u/i64']:
-#         stack[top-1] = float(stack[top-1])
-
-#     elif op in ['f64.promote/f32']:
-#         pass
-
-#     elif op in ['i32.reinterpret/f32']:
-#         stack[top-1] = struct.unpack('l', struct.pack('f', stack[top-1]))[0]
-
-#     elif op in ['i64.reinterpret/f64']:
-#         stack[top-1] = struct.unpack('L', stack.pack('d', stack[top-1]))[0]
-
-#     elif op in ['f32.reinterpret/i32']:
-#         stack[top-1] = struct.unpack('f', struct.pack('l', stack[top-1]))[0]
-
-#     elif op in ['f64.reinterpret/i64']:
-#         stack[top-1] = struct.unpack('d', struct.pack('L', stack[top-1]))
-
-#     else:
-#         log.debug('Unknown instruction: ' + opcode)
-#         raise Exception('Unknown instruction: ' + opcode)
-
-    
-#     # Correct the size of stack
-#     stack = stack[:top]
+#!/usr/bin/python3
 
 import math
 import typing
 import z3
 import copy
 import utils
-
-""" from wana import convention
-from wana import log
-from wana import num
-from wana import runtime_structure """
+import collections
 
 import convention
 import log
 import num
 import runtime_structure
+from global_variables import *
 
 class Store:
     # The store represents all global state that can be manipulated by WebAssembly programs. It consists of the runtime
@@ -959,7 +102,6 @@ class MemoryInstance:
     def __init__(self, limits: runtime_structure.Limits):
         self.limits = limits
         self.size = limits.minimum
-        # self.data = bytearray([0x00 for _ in range(limits.minimum * 64 * 1024)])
         self.data = [0] * limits.minimum * 64 * 1024
 
     def grow(self, n: int):
@@ -1103,36 +245,17 @@ class Stack:
             if isinstance(self.data[i], Frame):
                 return Frame
 
-class AdministrativeInstruction:
-    pass
-
-
-class BlockContext:
-    pass
-
-
-class Configuration:
-    # A configuration consists of the current store and an executing thread.
-    #
-    # A thread is a computation over instructions that operates relative to a current frame referring to the home
-    # module instance that the computation runs in.
-    #
-    # config ::= store;thread
-    # thread ::= frame;instr∗
-    pass
-
-
-class EvaluationContext:
-    # Finally, the following definition of evaluation context and associated structural rules enable reduction inside
-    # instruction sequences and administrative forms as well as the propagation of traps.
-    pass
+class Ctx:
+    # This exposes the specified memory of the WebAssembly instance.
+    def __init__(self, mems: typing.List[MemoryInstance]):
+        self.mems = mems
 
 def import_matching_limits(limits1: runtime_structure.Limits, limits2: runtime_structure.Limits):
     min1 = limits1.minimum
     max1 = limits1.maximum
     min2 = limits2.minimum
     max2 = limits2.maximum
-    if max2 is None or (max1 != None and max1 <= max2):
+    if max2 is None or (max1 is not None and max1 <= max2):
         return True
     return False
 
@@ -1198,7 +321,7 @@ class ModuleInstance:
         stack.add(frame)
         vals = []
         for glob in module.globals:
-            v = exec_expr(store, frame, stack, glob.expr, -1)[0]
+            v = exec_expr(store, frame, stack, glob.expr, -1)[0][0]
             vals.append(v)
         assert isinstance(stack.pop(), Frame)
 
@@ -1210,14 +333,14 @@ class ModuleInstance:
         stack.add(frame)
         # For each element segment in module.elem, then do:
         for e in module.elem:
-            offset = exec_expr(store, frame, stack, e.expr, -1)[0]
+            offset = exec_expr(store, frame, stack, e.expr, -1)[0][0]
             assert offset.valtype == convention.i32
             t = store.tables[self.tableaddrs[e.tableidx]]
             for i, e in enumerate(e.init):
                 t.elem[offset.n + i] = e
         # For each data segment in module.data, then do:
         for e in module.data:
-            offset = exec_expr(store, frame, stack, e.expr, -1)[0]
+            offset = exec_expr(store, frame, stack, e.expr, -1)[0][0]
             assert offset.valtype == convention.i32
             m = store.mems[self.memaddrs[e.memidx]]
             end = offset.n + len(e.init)
@@ -1285,7 +408,8 @@ def hostfunc_call(
 ):
     f: HostFunc = store.funcs[address]
     valn = [stack.pop() for _ in f.functype.args][::-1]
-    r = f.hostcode(*[e.n for e in valn])
+    ctx = Ctx(store.mems)
+    r = f.hostcode(ctx, *[e.n for e in valn])
     return [Value(f.functype.rets[0], r)]
 
 def wasmfunc_call(
@@ -1311,9 +435,8 @@ def wasmfunc_call(
     stack.add(frame)
     stack.add(Label(len(f.functype.rets), len(code)))
     # An expression is evaluated relative to a current frame pointing to its containing module instance.
-    r = exec_expr(store, frame, stack, f.code.expr, -1)
+    r, stack = exec_expr(store, frame, stack, f.code.expr, -1)
     # Exit
-    print('Last stack: ', stack)
     if not isinstance(stack.pop(), Frame):
         raise Exception('Signature mismatch in call!')
     return r
@@ -1353,7 +476,9 @@ def spec_br(l: int, stack: Stack) -> int:
     return L.continuation - 1
 
 #[TODO] solver change.
-solver = z3.Solver()
+path_condition = []
+global solver
+global path_conditions_and_results
 
 def exec_expr(
     store: Store,
@@ -1368,7 +493,6 @@ def exec_expr(
     # 3. Assert: due to validation, the top of the stack contains a value.
     # 4. Pop the value val from the stack.
 
-    global solver #[TODO] The source of solver.
     branch_res = []
 
     module = frame.module
@@ -1391,9 +515,6 @@ def exec_expr(
                 log.verboseln(f'{" "*18} {str(n)+":":<8} [{", ".join(e)}]')
 
         opcode = i.code
-        print('Stack: ', stack)
-        print('Branch result: ', branch_res)
-        print('Execute: ', hex(opcode))
         if opcode >= convention.unreachable and opcode <= convention.call_indirect:
             if opcode == convention.unreachable:
                 raise Exception('Unreachable opcode!')
@@ -1419,9 +540,8 @@ def exec_expr(
                     pc = expr.composition[pc][-1] - 1
                     continue
                 else:
-                    c = (c != 0)
                     solver.push()
-                    solver.add(c)
+                    solver.add(c != 0)
                     log.debugln('Branch: left')
                     try:
                         if solver.check() == z3.unsat:
@@ -1433,7 +553,13 @@ def exec_expr(
                             new_stack = copy.deepcopy(stack)
                             new_expr = copy.deepcopy(expr)
                             new_pc = pc
-                            branch_res += exec_expr(new_store, new_frame, new_stack, new_expr, new_pc)
+                            path_condition.append(c != 0)
+                            left_branch_res = exec_expr(new_store, new_frame, new_stack, new_expr, new_pc)[0]
+                            branch_res += left_branch_res
+                            if len(left_branch_res) == 1:
+                                path_conditions_and_results["path_condions"].append(path_condition[:])
+                                path_conditions_and_results["results"].append(left_branch_res[:])
+                            path_condition.pop()
                     except TimeoutError:
                         raise
                     except Exception as e:
@@ -1441,7 +567,7 @@ def exec_expr(
                     
                     solver.pop()
                     solver.push()
-                    solver.add(z3.Not(c))
+                    solver.add(c == 0)
                     log.debugln('Branch: right')
                     try:
                         if solver.check() == z3.unsat:
@@ -1453,13 +579,20 @@ def exec_expr(
                             new_stack = copy.deepcopy(stack)
                             new_expr = copy.deepcopy(expr)
                             new_pc = expr.composition[pc][1]
-                            branch_res += exec_expr(new_store, new_frame, new_stack, new_expr, new_pc)
+                            path_condition.append(c == 0)
+                            right_branch_res = exec_expr(new_store, new_frame, new_stack, new_expr, new_pc)[0]
+                            branch_res += right_branch_res
+                            if len(right_branch_res) == 1:
+                                path_conditions_and_results["path_conditions"].append(path_condition[:])
+                                path_conditions_and_results["results"].append(right_branch_res[:])
+                            path_condition.pop()
                     except TimeoutError:
                         raise
                     except Exception as e:
                         raise
-
-                    return branch_res
+                    
+                    solver.pop()
+                    return branch_res, new_stack
 
             if opcode == convention.else_:
                 for i in range(len(stack.data)):
@@ -1494,9 +627,8 @@ def exec_expr(
                     pc = spec_br(i.immediate_arguments, stack)
                     continue
                 else:
-                    c = (c == 0)
                     solver.push()
-                    solver.add(c)
+                    solver.add(c == 0)
                     log.debugln('Branch: left')
                     try:
                         if solver.check() == z3.unsat:
@@ -1508,15 +640,21 @@ def exec_expr(
                             new_stack = copy.deepcopy(stack)
                             new_expr = copy.deepcopy(expr)
                             new_pc = pc
-                            branch_res += exec_expr(new_store, new_frame, new_stack, new_expr, new_pc)
+                            path_condition.append(c == 0)
+                            left_branch_res = exec_expr(new_store, new_frame, new_stack, new_expr, new_pc)[0]
+                            branch_res += left_branch_res
+                            if len(left_branch_res) == 1:
+                                path_conditions_and_results["path_conditions"].append(path_condition[:])
+                                path_conditions_and_results["results"].append(left_branch_res[:])
+                            path_condition.pop()
                     except TimeoutError:
                         raise
                     except Exception as e:
                         raise
-                    
+
                     solver.pop()
                     solver.push()
-                    solver.add(z3.Not(c))
+                    solver.add(c != 0)
                     log.debugln('Branch: right')
                     try:
                         if solver.check() == z3.unsat:
@@ -1527,14 +665,23 @@ def exec_expr(
                             new_frame = copy.deepcopy(frame)
                             new_stack = copy.deepcopy(stack)
                             new_expr = copy.deepcopy(expr)
-                            new_pc = expr.composition[pc][1]
-                            branch_res += exec_expr(new_store, new_frame, new_stack, new_expr, new_pc)
+                            new_pc = spec_br(i.immediate_arguments, new_stack)
+                            path_condition.append(c != 0)
+                            right_branch_res = exec_expr(new_store, new_frame, new_stack, new_expr, new_pc)[0]
+                            branch_res += right_branch_res
+                            print("path_condition :", path_condition)
+                            print("right_branch_res :", right_branch_res)
+                            if len(right_branch_res) == 1:
+                                path_conditions_and_results["path_conditions"].append(path_condition[:])
+                                path_conditions_and_results["results"].append(right_branch_res[:])
+                            path_condition.pop()
                     except TimeoutError:
                         raise
                     except Exception as e:
                         raise
 
-                    return branch_res
+                    solver.pop()
+                    return branch_res, new_stack
 
             # [TODO] Ready to implement symbolic execution.
             if opcode == convention.br_table:
@@ -2513,5 +1660,4 @@ def exec_expr(
                 stack.add(Value.from_f64(num.i642f64(a)))
                 continue
             continue
-
-    return [stack.pop() for _ in range(frame.arity)][::-1]
+    return [stack.pop() for _ in range(frame.arity)][::-1], stack

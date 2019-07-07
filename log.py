@@ -12,7 +12,7 @@ def verboseln(*args):
         println(*args)
 
 def println(*args):
-    pre = datetime.datetime.now().shrftime('%Y/%m/%d %H:%M:%S')
+    pre = datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')
     print(pre, *args)
 
 def panicln(*args):
